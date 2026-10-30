@@ -15,11 +15,14 @@ Then start `bin\Tessera.exe`. It lives in the tray; double-click the tray icon f
 
 ## What it does
 
-- **Auto-tiling** per monitor, with gaps, equal or custom sizes.
+- **Auto-tiling** per monitor, with gaps. Pick a **layout** in Settings & help, the tray menu or with Win+Alt+N:
+  Grid, Columns, Rows, Main + stack (50/25/25), Stack + main (25/25/50), Spiral, Tabs or Manual. Space is shared out
+  evenly whenever a window opens or closes, so ten windows still look tidy (stored in `bin\options.json`).
 - **Keyboard control** for focus, swapping, resizing, moving between monitors, floating and tab groups.
   Every shortcut can be changed in Settings & help (stored in `bin\keys.json`).
 - **Drag a title bar**: drop zones appear on the other tiles — *Swap* in the middle, *Tab* near the top, or an edge to
-  put the window on that side. **Drag a border** to resize tiles.
+  put the window on that side. Drop it on another monitor (*Move here* on an empty one) to send it there.
+  **Drag a border** to resize tiles.
 - **Tab groups**: several windows share one tile under a tab strip (click to switch, middle-click to close).
 - **Focus border**: the focused window gets a blue border.
 - **Layout memory**: sizes, tab groups and which app is where are saved to `bin\layout.json` and restored after a
@@ -37,7 +40,8 @@ Then start `bin\Tessera.exe`. It lives in the tray; double-click the tray icon f
 | Win+Alt+Shift+Arrow | Send the focused window to the monitor in that direction |
 | Win+Alt+Right / Left / Down / Up | Wider / narrower / taller / shorter |
 | Win+Alt+E | Equal sizes |
-| Win+H / Win+V | Next window opens beside / below the focused one |
+| Win+Alt+N | Next layout |
+| Win+H / Win+V | Only the next window opens beside / below the focused one |
 | Win+D | Flip a group between side by side and stacked |
 | Win+F | Float / tile the focused window |
 | Win+S | Make a tab group, or lay one out side by side again |

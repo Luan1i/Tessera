@@ -19,15 +19,17 @@ namespace Tessera
     {
         readonly List<KeyAction> actions;
         readonly Action keysChanged;
+        readonly WM wm;
         readonly SynchronizationContext ui;
         readonly string token = Guid.NewGuid().ToString("N");
         TcpListener listener;
         int port;
 
-        public SettingsServer(List<KeyAction> actions, Action keysChanged)
+        public SettingsServer(List<KeyAction> actions, Action keysChanged, WM wm)
         {
             this.actions = actions;
             this.keysChanged = keysChanged;
+            this.wm = wm;
             ui = SynchronizationContext.Current; // created on the UI thread; API work runs there
         }
 
@@ -105,6 +107,7 @@ namespace Tessera
                     {
                         version = "1.0",
                         startup = Startup.Enabled(),
+                        layout = wm.Mode,
                         actions = actions.Select(a => new { id = a.Id, section = a.Section, label = a.Label, description = a.Description, keys = a.Keys, defaultKeys = a.Default }),
                     });
                 if (method == "POST" && route == "/api/keys")
@@ -123,6 +126,13 @@ namespace Tessera
                     object enabled;
                     Startup.Set(request != null && request.TryGetValue("enabled", out enabled) && enabled is bool && (bool)enabled);
                     return json.Serialize(new { ok = true });
+                }
+                if (method == "POST" && route == "/api/layout")
+                {
+                    var request = json.Deserialize<Dictionary<string, object>>(body);
+                    object layout;
+                    bool ok = request != null && request.TryGetValue("layout", out layout) && layout is string && wm.SetLayout((string)layout);
+                    return json.Serialize(new { ok, error = ok ? null : "Unknown layout." });
                 }
                 if (method == "POST" && route == "/api/open-folder")
                 {

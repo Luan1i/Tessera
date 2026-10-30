@@ -99,6 +99,81 @@ namespace Tessera
             p.Children.Insert(p.Children.IndexOf(target) + 1, new Node { Hwnd = h, Parent = p });
         }
 
+        // Puts h after 'target' in a new split of target's tile (side by side or stacked), so it takes half that tile.
+        public static void SplitInsert(Node target, IntPtr h, bool vertical)
+        {
+            var p = target.Parent.Children.Count == 1 ? target.Parent : Wrap(target);
+            p.Vertical = vertical;
+            p.Children.Insert(p.Children.IndexOf(target) + 1, new Node { Hwnd = h, Parent = p });
+        }
+
+        // Automatic layouts. "manual" means new windows split the focused tile and nothing is rearranged.
+        public static readonly string[] Layouts = { "grid", "columns", "rows", "main-left", "main-right", "spiral", "tabs", "manual" };
+        public static readonly string[] LayoutNames = { "Grid", "Columns", "Rows", "Main + stack", "Stack + main", "Spiral", "Tabs", "Manual" };
+
+        // A fresh tree with root's windows in that layout, all shares equal, window order kept.
+        // Tab groups stay one tile unless 'flatten' (picking a layout starts from scratch).
+        public static Node Arrange(Node root, string layout, bool flatten)
+        {
+            var leaves = new List<Node>();
+            Leaves(root, leaves);
+            var units = new List<Node>();
+            foreach (var leaf in leaves)
+            {
+                var u = leaf.Parent.Stacked && !flatten ? leaf.Parent : new Node { Hwnd = leaf.Hwnd };
+                if (units.Count == 0 || units[units.Count - 1] != u) units.Add(u);
+            }
+            int n = units.Count;
+            Node built = null;
+            if (n == 0) return new Node();
+            if (layout == "columns" || layout == "rows") built = Box(layout == "rows", units);
+            else if ((layout == "main-left" || layout == "main-right") && n > 1)
+            {
+                var stack = Box(true, units.GetRange(1, n - 1));
+                built = Box(false, layout == "main-left" ? new List<Node> { units[0], stack } : new List<Node> { stack, units[0] });
+            }
+            else if (layout == "spiral")
+            {
+                built = units[n - 1];
+                for (int i = n - 2; i >= 0; i--) built = Box(i % 2 == 1, new List<Node> { units[i], built }); // beside, below, beside...
+            }
+            else if (layout == "tabs" && leaves.Count > 1)
+            {
+                built = new Node { Stacked = true };
+                foreach (var leaf in leaves)
+                {
+                    built.Children.Add(new Node { Hwnd = leaf.Hwnd, Parent = built });
+                    if (leaf.Parent.Stacked && built.ActiveTab == IntPtr.Zero) built.ActiveTab = leaf.Parent.ActiveTab;
+                }
+            }
+            else if (n == 1) built = units[0];
+            else // grid: columns filled top to bottom; with an odd count the first columns hold one window less (3 = 1 tall + 2)
+            {
+                int cols = (int)Math.Ceiling(Math.Sqrt(n)), start = 0;
+                var columns = new List<Node>();
+                for (int i = 0; i < cols; i++)
+                {
+                    int count = n / cols + (i >= cols - n % cols ? 1 : 0);
+                    columns.Add(Box(true, units.GetRange(start, count)));
+                    start += count;
+                }
+                built = Box(false, columns);
+            }
+            if (built.IsLeaf || built.Stacked) built = Box(false, new List<Node> { built }, true); // the root is a plain container
+            built.Parent = null;
+            built.Weight = 1;
+            return built;
+        }
+
+        // A row (or column) of kids with equal shares; a single kid is returned as it is.
+        static Node Box(bool vertical, List<Node> kids, bool always = false)
+        {
+            if (kids.Count == 1 && !always) return kids[0];
+            var n = new Node { Vertical = vertical };
+            foreach (var k in kids) { k.Parent = n; k.Weight = 1; n.Children.Add(k); }
+            return n;
+        }
+
         public static void Equalize(Node n)
         {
             n.Weight = 1;
@@ -263,6 +338,45 @@ namespace Tessera
             Check(Tree.ZoneAt(tile, new Point(50, 10)) == 5, "tab zone");
             Tree.Remove(Tree.Find(root, d));
             Check(root.Children.Count == 2 && root.Children[1].Hwnd == c, "one-tab group collapsed");
+
+            // automatic layouts, 300x100 screen
+            IntPtr e = (IntPtr)5;
+            root = new Node();
+            foreach (var h in new[] { a, b, c, d }) Tree.Insert(root, h, null);
+            r = Lay(Tree.Arrange(root, "grid", false));
+            Check(r[a] == new Rectangle(0, 0, 150, 50) && r[b] == new Rectangle(0, 50, 150, 50) && r[c] == new Rectangle(150, 0, 150, 50) && r[d] == new Rectangle(150, 50, 150, 50), "grid 2x2, filled by columns");
+            r = Lay(Tree.Arrange(root, "columns", false));
+            Check(r[a].Width == 75 && r[d] == new Rectangle(225, 0, 75, 100), "4 equal columns");
+            r = Lay(Tree.Arrange(root, "rows", false));
+            Check(r[c] == new Rectangle(0, 50, 300, 25), "4 equal rows");
+            Tree.Remove(Tree.Find(root, d));
+            r = Lay(Tree.Arrange(root, "main-left", false));
+            Check(r[a] == new Rectangle(0, 0, 150, 100) && r[b] == new Rectangle(150, 0, 150, 50) && r[c] == new Rectangle(150, 50, 150, 50), "50 + 25 + 25");
+            r = Lay(Tree.Arrange(root, "main-right", false));
+            Check(r[a] == new Rectangle(150, 0, 150, 100) && r[b] == new Rectangle(0, 0, 150, 50), "25 + 25 + 50");
+            r = Lay(Tree.Arrange(root, "grid", false));
+            Check(r[a] == new Rectangle(0, 0, 150, 100) && r[b] == new Rectangle(150, 0, 150, 50) && r[c] == new Rectangle(150, 50, 150, 50), "grid of 3: one tall on the left, two stacked");
+            var five = new Node();
+            foreach (var h in new[] { a, b, c, d, e }) Tree.Insert(five, h, null);
+            r = Lay(Tree.Arrange(five, "grid", false));
+            Check(r[a] == new Rectangle(0, 0, 100, 100) && r[c] == new Rectangle(100, 50, 100, 50) && r[e] == new Rectangle(200, 50, 100, 50), "grid of 5: 1 + 2 + 2");
+            Tree.Insert(root, d, null);
+            r = Lay(Tree.Arrange(root, "spiral", false));
+            Check(r[a] == new Rectangle(0, 0, 150, 100) && r[b] == new Rectangle(150, 0, 150, 50) && r[c] == new Rectangle(150, 50, 75, 50) && r[d] == new Rectangle(225, 50, 75, 50), "spiral");
+            var tabbed = Tree.Arrange(root, "tabs", false);
+            r = Lay(tabbed);
+            Check(r[a] == r[d] && r[a].Width == 300 && !tabbed.Stacked && tabbed.Children[0].Stacked, "everything in one tab group");
+            Check(Lay(Tree.Arrange(tabbed, "columns", true))[b].Width == 75, "picking a layout breaks the group up");
+            Tree.AddTab(Tree.Find(root, a), e);
+            r = Lay(Tree.Arrange(root, "columns", false));
+            Check(r[a] == r[e] && r[a].Width == 75, "a user's tab group stays one tile");
+            root = new Node();
+            Tree.Insert(root, a, null);
+            Tree.Insert(root, b, Tree.Find(root, a));
+            Tree.Insert(root, c, Tree.Find(root, b));
+            Tree.SplitInsert(Tree.Find(root, c), d, true);
+            r = Lay(root);
+            Check(r[c] == new Rectangle(200, 0, 100, 50) && r[d] == new Rectangle(200, 50, 100, 50) && r[a].Width == 100, "next window halves the focused tile");
 
             // restore: saved [chrome "A" (wide) | tabs(code "x", code "y" active, notepad)]; notepad isn't open any more
             var w1 = new SavedNode { Kind = "window", Process = "chrome", Class = "C", Title = "A", Weight = 2 };

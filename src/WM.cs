@@ -49,6 +49,11 @@ namespace Tessera
         readonly TabStrips strips = new TabStrips();
         IntPtr bordered;
 
+        static readonly string OptionsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "options.json");
+        public string Mode = LoadMode(); // one of Tree.Layouts
+        readonly HashSet<string> handMade = new HashSet<string>(); // monitors arranged by hand: new windows don't re-run the layout
+        bool? splitNext; // Win+H / Win+V: the next new window goes beside (false) / below (true) the focused one
+
         static readonly string LayoutPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "layout.json");
         Dictionary<string, SavedNode> template; // the layout saved before the last exit/restart
         int savedCount, lastMatchCount = -1;
@@ -127,12 +132,13 @@ namespace Tessera
             var liveSet = new HashSet<IntPtr>(live);
             floating.RemoveWhere(h => !Native.IsWindow(h));
 
-            foreach (var root in roots.Values)
+            var changed = new HashSet<string>(); // monitors that gained or lost a window
+            foreach (var kv in roots)
             {
                 var leaves = new List<Node>();
-                Tree.Leaves(root, leaves);
+                Tree.Leaves(kv.Value, leaves);
                 foreach (var leaf in leaves)
-                    if (!liveSet.Contains(leaf.Hwnd) || floating.Contains(leaf.Hwnd)) Tree.Remove(leaf);
+                    if (!liveSet.Contains(leaf.Hwnd) || floating.Contains(leaf.Hwnd)) { Tree.Remove(leaf); changed.Add(kv.Key); }
             }
 
             if (Restoring)
@@ -147,6 +153,7 @@ namespace Tessera
                     {
                         SavedNode s;
                         roots[d.Name] = template.TryGetValue(d.Name, out s) ? SavedLayout.Build(s, match, true) : new Node();
+                        if (s != null && s.Manual) handMade.Add(d.Name);
                     }
                 }
                 if (match.Count == savedCount) StopRestoring(); // everything is back
@@ -156,12 +163,73 @@ namespace Tessera
             foreach (var h in live)
             {
                 if (floating.Contains(h) || FindLeaf(h) != null) continue;
+                string name = Native.DisplayOf(h).Name;
                 Node root;
-                if (!roots.TryGetValue(Native.DisplayOf(h).Name, out root)) continue;
-                Tree.Insert(root, h, Tree.Find(root, lastFocus)); // next to the focused window if it's on this monitor
+                if (!roots.TryGetValue(name, out root)) continue;
+                var at = Tree.Find(root, lastFocus); // the focused window, if it's on this monitor
+                if (at == null || at.Parent.Stacked) Tree.Insert(root, h, at); // opened from a tab group: becomes a tab
+                else if (splitNext.HasValue || !Auto(name))
+                {
+                    Rectangle r;
+                    bool below = splitNext ?? (layout.TryGetValue(at.Hwnd, out r) && r.Height > r.Width); // split the long side
+                    Tree.SplitInsert(at, h, below);
+                    if (splitNext.HasValue) handMade.Add(name);
+                    splitNext = null;
+                }
+                else Tree.Insert(root, h, at); // right after the focused window; the layout below decides where that is
+                changed.Add(name);
+            }
+            foreach (var name in changed)
+                if (Auto(name)) roots[name] = Tree.Arrange(roots[name], Mode, false);
+            foreach (var kv in roots)
+            {
+                var leaves = new List<Node>();
+                Tree.Leaves(kv.Value, leaves);
+                if (leaves.Count <= 1) handMade.Remove(kv.Key); // nothing left to keep: back to the automatic layout
             }
             NoteFocus(Native.GetForegroundWindow()); // a new window opened in a tab group becomes its active tab
             Apply();
+        }
+
+        bool Auto(string monitor) { return Mode != "manual" && !handMade.Contains(monitor); }
+
+        string MonitorOf(IntPtr h) { return roots.First(kv => Tree.Find(kv.Value, h) != null).Key; }
+
+        // The user arranged this window's monitor by hand: keep it as it is from now on.
+        void Arranged(IntPtr h) { if (FindLeaf(h) != null) handMade.Add(MonitorOf(h)); }
+
+        static string LoadMode()
+        {
+            try
+            {
+                var o = new JavaScriptSerializer().Deserialize<Dictionary<string, string>>(File.ReadAllText(OptionsPath));
+                string m;
+                if (o != null && o.TryGetValue("layout", out m) && Tree.Layouts.Contains(m)) return m;
+            }
+            catch (Exception) { } // missing or unreadable: the default
+            return "grid";
+        }
+
+        // Picks the layout for new windows and lays every monitor out in it now (manual keeps what's there).
+        public bool SetLayout(string mode)
+        {
+            if (!Tree.Layouts.Contains(mode)) return false;
+            Mode = mode;
+            try { File.WriteAllText(OptionsPath, new JavaScriptSerializer().Serialize(new Dictionary<string, string> { { "layout", mode } })); }
+            catch (IOException) { } // still applies until Tessera restarts
+            handMade.Clear();
+            splitNext = null;
+            StopRestoring();
+            if (mode != "manual")
+                foreach (var name in roots.Keys.ToList()) roots[name] = Tree.Arrange(roots[name], mode, true);
+            NoteFocus(Native.GetForegroundWindow());
+            Apply();
+            return true;
+        }
+
+        public void NextLayout()
+        {
+            SetLayout(Tree.Layouts[(Array.IndexOf(Tree.Layouts, Mode) + 1) % Tree.Layouts.Length]);
         }
 
         void Apply()
@@ -230,7 +298,7 @@ namespace Tessera
         public void SaveLayout()
         {
             if (Restoring || sessionEnding || layout.Count == 0) return; // never overwrite the saved layout with an empty one
-            var data = roots.ToDictionary(kv => kv.Key, kv => Save(kv.Value));
+            var data = roots.ToDictionary(kv => kv.Key, kv => { var s = Save(kv.Value); s.Manual = handMade.Contains(kv.Key); return s; });
             var json = new JavaScriptSerializer().Serialize(data);
             if (json == lastSaved) return;
             try
@@ -274,10 +342,22 @@ namespace Tessera
             var here = roots.First(kv => Tree.Find(kv.Value, cur) != null).Key;
             var others = Native.Displays().Where(d => d.Name != here).ToList();
             int i = Nearest(layout[cur], dir, others.Select(d => d.Work).ToList());
+            if (i >= 0) MoveTo(cur, others[i].Name);
+        }
+
+        // Moves tiled window h to the end of another monitor's tiles (also: dropped there with the mouse).
+        public void MoveTo(IntPtr h, string monitor)
+        {
+            var n = FindLeaf(h);
             Node root;
-            if (i < 0 || !roots.TryGetValue(others[i].Name, out root)) return;
-            Tree.Remove(FindLeaf(cur));
-            Tree.Insert(root, cur, null);
+            if (n != null && roots.TryGetValue(monitor, out root))
+            {
+                string here = MonitorOf(h);
+                Tree.Remove(n);
+                Tree.Insert(root, h, null);
+                foreach (var name in new[] { here, monitor }.Distinct())
+                    if (Auto(name)) roots[name] = Tree.Arrange(roots[name], Mode, false);
+            }
             Apply();
         }
 
@@ -338,9 +418,13 @@ namespace Tessera
                 if (zone == 4) Swap(a, b);
                 else
                 {
+                    string from = MonitorOf(dragged), to = MonitorOf(target);
+                    if (zone != 5) Arranged(target); // a tab group is one tile in any layout; an edge drop is arranging by hand
                     Tree.Remove(a);
                     if (zone == 5) { Tree.AddTab(b, dragged); b.Parent.ActiveTab = dragged; }
                     else Tree.InsertBeside(b.Parent.Stacked ? b.Parent : b, dragged, zone); // beside the whole tab group
+                    foreach (var name in new[] { from, to }.Distinct())
+                        if (Auto(name)) roots[name] = Tree.Arrange(roots[name], Mode, false);
                 }
             }
             Apply();
@@ -432,6 +516,8 @@ namespace Tessera
             else if (p.Parent != null && p.Children.Count == 1) p.Stacked = true;
             else Tree.Wrap(n).Stacked = true;
             n.Parent.ActiveTab = n.Hwnd;
+            string m = MonitorOf(n.Hwnd);
+            if (Auto(m)) roots[m] = Tree.Arrange(roots[m], Mode, false); // a group is one tile; split up, each window gets its own
             Apply();
         }
 
@@ -457,16 +543,14 @@ namespace Tessera
             Native.SetWindowPos(h, IntPtr.Zero, w.X + w.Width / 6, w.Y + w.Height / 6, w.Width * 2 / 3, w.Height * 2 / 3, Native.SWP_NOACTIVATE);
         }
 
-        public void SplitFocused(bool vertical)
-        {
-            var n = FindLeaf(Focused());
-            if (n != null && !n.Parent.Stacked) Tree.Split(n, vertical); // inside tabs, new windows always become tabs
-        }
+        // Win+H / Win+V: only the next window that opens goes beside / below the focused one (inside tabs it becomes a tab).
+        public void SplitFocused(bool vertical) { splitNext = vertical; }
 
         public void FlipDirection()
         {
             var n = FindLeaf(Focused());
             if (n == null || n.Parent.Stacked) return;
+            Arranged(n.Hwnd);
             n.Parent.Vertical = !n.Parent.Vertical;
             Apply();
         }
@@ -490,6 +574,8 @@ namespace Tessera
             StopRestoring();
             Ignore.Load();
             roots.Clear();
+            handMade.Clear();
+            splitNext = null;
             floating.Clear();
             layout.Clear();
             Sync();

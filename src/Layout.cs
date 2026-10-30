@@ -9,6 +9,7 @@ namespace Tessera
     {
         public string Kind; // "split", "tabs" or "window"
         public bool Vertical, Active; // Active: the visible tab of its group
+        public bool Manual; // monitor roots only: arranged by hand, so the automatic layout leaves it alone
         public double Weight = 1;
         public long Hwnd;
         public string Process, Class, Title;

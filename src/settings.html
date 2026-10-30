@@ -201,6 +201,20 @@ kbd.ghost{background:transparent;border:1px dashed var(--line-strong);color:var(
 .zones .z.edge{stroke-dasharray:3 2}
 .zones text{fill:var(--accent-text);font:600 10px var(--font);text-anchor:middle}
 
+/* ---------- layout page ---------- */
+.layouts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.lay{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:12px 14px 14px;text-align:left;cursor:pointer;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);transition:border-color .15s ease-out,background .15s ease-out}
+.lay:hover{background:var(--card-hover)}
+.lay:active{background:var(--card-press)}
+.lay[aria-checked=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.lay svg{width:100%;height:auto;margin-bottom:8px;fill:none}
+.lay .t{fill:var(--tile);stroke:var(--line-strong);transition:fill .15s ease-out,stroke .15s ease-out}
+.lay[aria-checked=true] .t{fill:var(--accent-soft);stroke:var(--accent)}
+.lay-name{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600}
+.lay-name .on{font-size:12px;font-weight:600;color:var(--accent-text)}
+.lay-desc{font-size:13px;color:var(--text-2)}
+
 /* ---------- general / about ---------- */
 .switch{display:inline-flex;align-items:center;gap:12px;padding:4px;border:0;border-radius:5px;background:none;cursor:pointer}
 .switch[aria-busy=true]{cursor:progress}
@@ -278,6 +292,7 @@ dialog::backdrop{background:var(--scrim)}
     <nav aria-label="Settings pages">
       <ul class="nav">
         <li><button type="button" data-page="shortcuts" aria-current="page"><i data-ic="keyboard"></i>Shortcuts</button></li>
+        <li><button type="button" data-page="layout"><i data-ic="layout"></i>Layout</button></li>
         <li><button type="button" data-page="mouse"><i data-ic="mouse"></i>Mouse &amp; automatic</button></li>
         <li><button type="button" data-page="general"><i data-ic="sliders"></i>General</button></li>
         <li><button type="button" data-page="about"><i data-ic="info"></i>About</button></li>
@@ -309,6 +324,36 @@ dialog::backdrop{background:var(--scrim)}
       </div>
     </section>
 
+    <!-- Layout -->
+    <section class="page" id="page-layout" aria-labelledby="h-layout" hidden>
+      <header class="page-head">
+        <h1 id="h-layout">Layout</h1>
+        <p class="lede">How windows are arranged when one opens or closes. Space is always shared out evenly, however many windows you have.</p>
+      </header>
+      <div class="layouts" id="layouts" role="radiogroup" aria-labelledby="h-layout"></div>
+      <section class="group" aria-labelledby="h-layout-more">
+        <h2 class="gh" id="h-layout-more">Good to know</h2>
+        <ul class="card info">
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="layout"></i></span>
+            <div class="info-text"><h3>Switch quickly</h3><p>Press <span data-keys-for="layout-next"></span> for the next layout, or pick one from the tray icon's menu. Every monitor is rearranged right away.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="split"></i></span>
+            <div class="info-text"><h3>Just the next window</h3><p><span data-keys-for="split-beside"></span> or <span data-keys-for="split-below"></span> puts only the next window you open beside or below the focused one. It doesn't stick: later windows split whichever tile is focused, so nothing gets squeezed into thin strips.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="move"></i></span>
+            <div class="info-text"><h3>Arranged by hand</h3><p>After you place a window yourself (that shortcut, dropping on a tile's edge, or flipping a group), that monitor keeps your arrangement: new windows split the focused tile in half instead. Pick a layout to tidy up again.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="resize"></i></span>
+            <div class="info-text"><h3>Sizes</h3><p>Tiles you resize go back to even shares the next time a window opens or closes, except on monitors you arranged by hand and in Manual.</p></div>
+          </li>
+        </ul>
+      </section>
+    </section>
+
     <!-- Mouse & automatic -->
     <section class="page" id="page-mouse" aria-labelledby="h-mouse" hidden>
       <header class="page-head">
@@ -322,7 +367,7 @@ dialog::backdrop{background:var(--scrim)}
             <span class="tile-ic"><i data-ic="move"></i></span>
             <div class="info-text">
               <h3>Drag a title bar</h3>
-              <p>Drop zones appear on the other tiles. The <strong>Swap</strong> box in the middle swaps the two windows, the <strong>Tab</strong> box near the top adds the window as a tab, and near an <strong>edge</strong> puts it on that side. <kbd>Esc</kbd> cancels.</p>
+              <p>Drop zones appear on the other tiles. The <strong>Swap</strong> box in the middle swaps the two windows, the <strong>Tab</strong> box near the top adds the window as a tab, and near an <strong>edge</strong> puts it on that side. On another monitor, drop it on a tile the same way, or on the <strong>Move here</strong> box of an empty monitor (or any gap) to add it to that monitor's layout. <kbd>Esc</kbd> cancels.</p>
             </div>
             <svg class="zones" viewBox="0 0 150 96" aria-hidden="true">
               <rect class="t" x="1" y="1" width="148" height="94" rx="6"/>
@@ -384,7 +429,7 @@ dialog::backdrop{background:var(--scrim)}
         </div>
         <div class="set-row">
           <span class="tile-ic"><i data-ic="folder"></i></span>
-          <span class="set-text"><span class="set-title" id="folder-label">Open Tessera folder</span><span class="set-desc" id="folder-desc">Your saved layout (<code>layout.json</code>), ignore list (<code>ignore.txt</code>) and shortcuts (<code>keys.json</code>) live here.</span></span>
+          <span class="set-text"><span class="set-title" id="folder-label">Open Tessera folder</span><span class="set-desc" id="folder-desc">Your saved layout (<code>layout.json</code>), ignore list (<code>ignore.txt</code>), shortcuts (<code>keys.json</code>) and layout choice (<code>options.json</code>) live here.</span></span>
           <button type="button" class="btn" id="open-folder" aria-describedby="folder-desc">Open folder</button>
         </div>
       </div>
@@ -463,7 +508,9 @@ const P = {
   eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
   check:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
   alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
-  win:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>'
+  win:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>',
+  layout:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h18M12 10v11"/>',
+  split:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M16 12h2M17 11v2"/>'
 };
 const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
 const WINLOGO = '<svg class="winlogo" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 1h6.6v6.6H1zM8.4 1H15v6.6H8.4zM1 8.4h6.6V15H1zM8.4 8.4H15V15H8.4z"/></svg>';
@@ -541,8 +588,9 @@ const DEFAULTS = [
   ['wider','Sizes','Wider','Make the focused window wider.','Win+Alt+Right'],
   ['taller','Sizes','Taller','Make the focused window taller.','Win+Alt+Down'],
   ['equalize','Sizes','Equal sizes','Make all tiles equal size again.','Win+Alt+E'],
-  ['split-beside','Layout','Open next beside','The next window you open goes beside the focused one.','Win+H'],
-  ['split-below','Layout','Open next below','The next window you open goes below the focused one.','Win+V'],
+  ['layout-next','Layout','Next layout','Switch every monitor to the next automatic layout (Grid, Columns, Rows, Main + stack, ...).','Win+Alt+N'],
+  ['split-beside','Layout','Open next beside','Only the next window you open goes beside the focused one (it doesn’t stick).','Win+H'],
+  ['split-below','Layout','Open next below','Only the next window you open goes below the focused one (it doesn’t stick).','Win+V'],
   ['flip','Layout','Flip direction','Flip the focused group between side by side and stacked.','Win+D'],
   ['float','Layout','Float / tile','Float the focused window (centered, on top) or put it back in the tiles.','Win+F'],
   ['tabs','Tabs','Tab group','Turn the focused window into a tab group, or lay a tab group out side by side again.','Win+S'],
@@ -557,7 +605,7 @@ const DEFAULTS = [
 /* ---------- API ---------- */
 const token = new URLSearchParams(location.search).get('t');
 let preview = !token;
-let S = { version: '', startup: false, actions: [] };
+let S = { version: '', startup: false, layout: 'grid', actions: [] };
 const find = id => S.actions.find(a => a.id === id);
 
 async function api(method, path, body) {
@@ -808,6 +856,44 @@ dlg.addEventListener('close', async () => {
   } catch (err) { toast(err.message, true); }
 });
 
+/* ---------- layout ---------- */
+const R = (x, y, w, h) => `<rect class="t" x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/>`;
+const LAYOUTS = [
+  ['grid', 'Grid', 'Equal tiles in columns. 4 windows: 2 × 2. 3 windows: one tall on the left, two stacked on the right.', R(1,1,30,18) + R(33,1,30,18) + R(1,21,30,18) + R(33,21,30,18)],
+  ['columns', 'Columns', 'Side by side, equal widths. 4 windows: 25% each.', R(1,1,14,38) + R(17,1,14,38) + R(33,1,14,38) + R(49,1,14,38)],
+  ['rows', 'Rows', 'Stacked, equal heights.', R(1,1,62,8) + R(1,11,62,8) + R(1,21,62,8) + R(1,31,62,8)],
+  ['main-left', 'Main + stack', 'The first window gets the left half; the rest share the right (50% + 25% + 25%).', R(1,1,30,38) + R(33,1,30,18) + R(33,21,30,18)],
+  ['main-right', 'Stack + main', 'The same, mirrored: the rest on the left, the first window on the right (25% + 25% + 50%).', R(1,1,30,18) + R(1,21,30,18) + R(33,1,30,38)],
+  ['spiral', 'Spiral', 'Each new window splits the last tile: beside, then below, then beside again.', R(1,1,30,38) + R(33,1,30,18) + R(33,21,14,18) + R(49,21,14,18)],
+  ['tabs', 'Tabs', 'Every window full size, as tabs of one group.', R(1,1,18,6) + R(21,1,18,6) + R(41,1,18,6) + R(1,9,62,30)],
+  ['manual', 'Manual', 'New windows split the focused tile in half. Nothing is rearranged for you.', R(1,1,38,38) + R(41,1,22,22) + R(41,25,22,14)]
+];
+function renderLayouts() {
+  $('#layouts').innerHTML = LAYOUTS.map(([id, name, desc, shape]) => {
+    const on = id === S.layout;
+    return `<button type="button" class="lay" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-layout="${id}">
+      <svg viewBox="0 0 64 40" aria-hidden="true">${shape}</svg>
+      <span class="lay-name">${esc(name)}${on ? '<span class="on">In use</span>' : ''}</span>
+      <span class="lay-desc">${esc(desc)}</span></button>`;
+  }).join('');
+}
+async function pickLayout(id) {
+  if (id === S.layout) return;
+  const prev = S.layout, name = LAYOUTS.find(l => l[0] === id)[1];
+  S.layout = id; renderLayouts(); $(`.lay[data-layout="${id}"]`).focus();
+  try {
+    if (!preview) await api('POST', '/api/layout', { layout: id });
+    toast(preview ? 'Saved in preview — Tessera wasn’t changed' : `${name} — your windows were rearranged`);
+  } catch (err) { S.layout = prev; renderLayouts(); toast(err.message, true); }
+}
+$('#layouts').addEventListener('click', e => { const b = e.target.closest('.lay'); if (b) pickLayout(b.dataset.layout); });
+$('#layouts').addEventListener('keydown', e => {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!step) return;
+  e.preventDefault();
+  const i = LAYOUTS.findIndex(l => l[0] === S.layout);
+  pickLayout(LAYOUTS[(i + step + LAYOUTS.length) % LAYOUTS.length][0]);
+});
+
 /* ---------- general ---------- */
 const sw = $('#startup');
 function setSwitch(on) { sw.setAttribute('aria-checked', String(on)); $('.sw-state', sw).textContent = on ? 'On' : 'Off'; }
@@ -834,16 +920,17 @@ $('#open-folder').addEventListener('click', async () => {
     try {
       const d = await api('GET', '/api/state');
       if (!Array.isArray(d.actions)) throw new Error('bad state');
-      S = { version: d.version || '', startup: !!d.startup,
+      S = { version: d.version || '', startup: !!d.startup, layout: d.layout || 'grid',
             actions: d.actions.map(a => ({ ...a, keys: norm(a.keys), defaultKeys: norm(a.defaultKeys) })) };
     } catch {
       preview = true;
       $('#banner-text').textContent = 'Couldn’t reach Tessera — preview, changes aren’t saved';
     }
   }
-  if (preview) S = { version: '', startup: true, actions: DEFAULTS.map(a => ({ ...a })) };
+  if (preview) S = { version: '', startup: true, layout: 'grid', actions: DEFAULTS.map(a => ({ ...a })) };
   $('#banner').hidden = !preview;
   setSwitch(S.startup);
+  renderLayouts();
   const v = S.version ? `Version ${S.version}` : '';
   $('#side-version').textContent = v;
   $('#about-version').textContent = v ? `${v} · A tiling window manager for Windows 11` : 'A tiling window manager for Windows 11';

@@ -90,7 +90,7 @@ namespace Tessera
                 hooks.Add(Native.SetWinEventHook(EventRanges[i], EventRanges[i + 1], IntPtr.Zero, onEvent, 0, 0, 2 /* out of context, skip own process */));
 
             inspector = new Inspector(wm);
-            settings = new SettingsServer(actions, Rebind);
+            settings = new SettingsServer(actions, Rebind, wm);
             DefineActions();
             KeyBindings.Load(actions);
             onKey = OnKey;
@@ -102,6 +102,14 @@ namespace Tessera
 
             var menu = new ContextMenuStrip();
             menu.Items.Add(MenuItem("Settings && help", "settings", settings.Open));
+            var layouts = new ToolStripMenuItem("Layout");
+            for (int i = 0; i < Tree.Layouts.Length; i++)
+            {
+                string id = Tree.Layouts[i];
+                layouts.DropDownItems.Add(new ToolStripMenuItem(Tree.LayoutNames[i], null, delegate { wm.SetLayout(id); }) { Tag = id });
+            }
+            menu.Opening += delegate { foreach (ToolStripMenuItem item in layouts.DropDownItems) item.Checked = (string)item.Tag == wm.Mode; };
+            menu.Items.Add(layouts);
             menu.Items.Add(MenuItem("Show windows", "inspector", inspector.Toggle));
             menu.Items.Add(pauseItem = MenuItem("Pause tiling", "pause", TogglePause));
             menu.Items.Add(MenuItem("Re-tile all", "retile", wm.Reload));
@@ -163,8 +171,9 @@ namespace Tessera
                 Add("Sizes", size[i], char.ToUpper(size[i][0]) + size[i].Substring(1), "Make the focused window " + size[i] + ".", "Win+Alt+" + dir[i], () => wm.ResizeFocused(i));
             }
             Add("Sizes", "equalize", "Equal sizes", "Make all tiles equal size again.", "Win+Alt+E", wm.Equalize);
-            Add("Layout", "split-beside", "Open next beside", "The next window you open goes beside the focused one.", "Win+H", () => wm.SplitFocused(false));
-            Add("Layout", "split-below", "Open next below", "The next window you open goes below the focused one.", "Win+V", () => wm.SplitFocused(true));
+            Add("Layout", "layout-next", "Next layout", "Switch every monitor to the next automatic layout (Grid, Columns, Rows, Main + stack, ...).", "Win+Alt+N", wm.NextLayout);
+            Add("Layout", "split-beside", "Open next beside", "Only the next window you open goes beside the focused one (it doesn't stick).", "Win+H", () => wm.SplitFocused(false));
+            Add("Layout", "split-below", "Open next below", "Only the next window you open goes below the focused one (it doesn't stick).", "Win+V", () => wm.SplitFocused(true));
             Add("Layout", "flip", "Flip direction", "Flip the focused group between side by side and stacked.", "Win+D", wm.FlipDirection);
             Add("Layout", "float", "Float / tile", "Float the focused window (centered, on top) or put it back in the tiles.", "Win+F", wm.ToggleFloat);
             Add("Tabs", "tabs", "Tab group", "Turn the focused window into a tab group, or lay a tab group out side by side again.", "Win+S", wm.ToggleStack);

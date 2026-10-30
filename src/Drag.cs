@@ -16,9 +16,13 @@ namespace Tessera
         IntPtr dragged;
         Rectangle startRect;
         List<KeyValuePair<IntPtr, Rectangle>> targets;
+        List<Display> displays;
+        public Rectangle StartWork; // work area of the monitor the drag started on
         public IntPtr HoverTarget;
         public Rectangle HoverRect;
-        public int HoverZone = -1;
+        public int HoverZone = -1; // Tree.ZoneAt zones, or MoveZone
+        public const int MoveZone = 6; // another monitor, not over a tile: the window joins that monitor
+        string hoverMonitor;
 
         public DragController(WM wm)
         {
@@ -36,6 +40,8 @@ namespace Tessera
             wm.Dragging = h;
             startRect = Native.VisibleRect(h);
             targets = wm.Targets(h);
+            displays = Native.Displays();
+            StartWork = Native.DisplayOf(h).Work;
             HoverZone = -1;
             timer.Start();
         }
@@ -52,6 +58,7 @@ namespace Tessera
             dragged = IntPtr.Zero;
             wm.Dragging = IntPtr.Zero;
             if (now.Size != startRect.Size) wm.Resized(h, startRect, now); // border drag: resize the tiles
+            else if (moved && HoverZone == MoveZone) wm.MoveTo(h, hoverMonitor);
             else if (moved && HoverZone >= 0) wm.Drop(h, HoverTarget, HoverZone);
             else wm.Sync(); // snap back into its tile
         }
@@ -62,7 +69,7 @@ namespace Tessera
             // same size but new position = a move; a size change means the user is resizing from a border
             if (r.Size != startRect.Size || r.Location == startRect.Location) return;
             if (overlays.Count == 0)
-                foreach (var d in Native.Displays())
+                foreach (var d in displays)
                 {
                     var o = new DropOverlay(this, d.Work);
                     overlays.Add(o);
@@ -75,7 +82,10 @@ namespace Tessera
             Rectangle rect = Rectangle.Empty;
             foreach (var t in targets)
                 if (t.Value.Contains(p)) { target = t.Key; rect = t.Value; zone = Tree.ZoneAt(t.Value, p); }
-            if (zone == HoverZone && target == HoverTarget) return;
+            if (zone < 0)
+                foreach (var d in displays)
+                    if (d.Work.Contains(p) && d.Work != StartWork) { zone = MoveZone; rect = d.Work; hoverMonitor = d.Name; }
+            if (zone == HoverZone && target == HoverTarget && rect == HoverRect) return;
             HoverZone = zone;
             HoverTarget = target;
             HoverRect = rect;
@@ -120,6 +130,7 @@ namespace Tessera
             var g = e.Graphics;
             g.TranslateTransform(-Left, -Top);
             using (var border = new Pen(Accent, 3))
+            using (var thick = new Pen(Accent, 6))
             using (var dashed = new Pen(Accent, 2) { DashStyle = DashStyle.Dash })
             using (var fill = new SolidBrush(Accent))
             using (var font = new Font("Segoe UI", 18f * DeviceDpi / 96, FontStyle.Bold, GraphicsUnit.Pixel))
@@ -136,7 +147,21 @@ namespace Tessera
                     TextRenderer.DrawText(g, "Swap", font, swap, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                     TextRenderer.DrawText(g, "Tab", font, tab, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
-                if (drag.HoverZone >= 0 && Bounds.IntersectsWith(drag.HoverRect))
+                // another monitor without tiles: say it can take the window
+                var box = Rectangle.Inflate(Bounds, -Bounds.Width * 3 / 10, -Bounds.Height * 3 / 10);
+                bool hovered = drag.HoverZone == DragController.MoveZone && drag.HoverRect == Bounds;
+                if (hovered)
+                {
+                    g.DrawRectangle(thick, Left + 3, Top + 3, Width - 6, Height - 6);
+                    g.FillRectangle(fill, box);
+                    TextRenderer.DrawText(g, "Move here", font, box, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                else if (Bounds != drag.StartWork && !drag.Targets.Exists(t => Bounds.IntersectsWith(t.Value)))
+                {
+                    g.DrawRectangle(dashed, box);
+                    TextRenderer.DrawText(g, "Move here", font, box, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                else if (drag.HoverZone >= 0 && Bounds.IntersectsWith(drag.HoverRect))
                     g.FillRectangle(fill, Rectangle.Inflate(Tree.ZoneRect(drag.HoverRect, drag.HoverZone), -6, -6));
             }
         }
