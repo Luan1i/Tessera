@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tessera Settings</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect x='2' y='2' width='11' height='11' rx='3' fill='%230078d4'/%3E%3Crect x='15' y='2' width='11' height='11' rx='3' fill='%23888'/%3E%3Crect x='2' y='15' width='11' height='11' rx='3' fill='%23888'/%3E%3Crect x='15' y='15' width='11' height='11' rx='3' fill='%23aaa'/%3E%3C/svg%3E">
+<style>
+:root{
+  --font:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --font-display:"Segoe UI Variable Display","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --font-mono:"Cascadia Mono","Consolas",monospace;
+
+  --bg:#f3f3f3; --bg-glow:rgba(0,120,212,.07);
+  --card:#fbfbfb; --card-hover:#f5f5f5; --card-press:#f0f0f0; --card-sub:#f6f6f6;
+  --line:rgba(0,0,0,.08); --line-strong:rgba(0,0,0,.16);
+  --text:#1b1b1b; --text-2:#5c5c5c; --text-3:#666;
+  --accent:#0078d4; --accent-hover:#1a86d9; --accent-press:#006cbe; --on-accent:#fff;
+  --accent-text:#005a9e; --accent-soft:rgba(0,120,212,.10);
+  --focus:#0078d4;
+  --nav-hover:rgba(0,0,0,.04); --nav-active:rgba(0,0,0,.065);
+  --ctl:#fff; --ctl-hover:#f9f9f9; --ctl-press:#f3f3f3; --ctl-line:rgba(0,0,0,.11); --ctl-line-b:rgba(0,0,0,.24);
+  --key-top:#fff; --key-bot:#f4f4f4; --key-line:rgba(0,0,0,.14); --key-edge:rgba(0,0,0,.26); --key-text:#1b1b1b;
+  --tile:#ececec;
+  --danger:#c42b1c; --danger-fill:#c42b1c; --warn:#8a5300; --ok:#0f7b0f;
+  --toggle-off:#5c5c5c;
+  --shadow:0 1px 2px rgba(0,0,0,.04);
+  --shadow-pop:0 16px 40px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08);
+  --scrim:rgba(0,0,0,.3);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#202020; --bg-glow:rgba(0,120,212,.12);
+    --card:#2b2b2b; --card-hover:#323232; --card-press:#292929; --card-sub:#272727;
+    --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.16);
+    --text:#fff; --text-2:#c8c8c8; --text-3:#adadad;
+    --accent-text:#62b6ff; --accent-soft:rgba(76,168,255,.15);
+    --focus:#4aa8ff;
+    --nav-hover:rgba(255,255,255,.05); --nav-active:rgba(255,255,255,.085);
+    --ctl:#373737; --ctl-hover:#3d3d3d; --ctl-press:#323232; --ctl-line:rgba(255,255,255,.08); --ctl-line-b:rgba(255,255,255,.05);
+    --key-top:#3f3f3f; --key-bot:#363636; --key-line:rgba(255,255,255,.12); --key-edge:rgba(0,0,0,.55); --key-text:#fff;
+    --tile:#353535;
+    --danger:#ff99a4; --warn:#fce100; --ok:#6ccb5f;
+    --toggle-off:#c8c8c8;
+    --shadow:0 1px 2px rgba(0,0,0,.2);
+    --shadow-pop:0 16px 40px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3);
+    --scrim:rgba(0,0,0,.5);
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 var(--font);color:var(--text);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.winlogo{width:10px;height:10px;fill:currentColor;flex:none}
+code{font:12.5px var(--font-mono)}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:272px 1fr;height:100vh;
+  background:radial-gradient(900px 520px at -10% -10%,var(--bg-glow),transparent 70%),var(--bg)}
+.side{display:flex;flex-direction:column;gap:10px;padding:14px 8px 14px 12px;min-width:0}
+.brand{display:flex;align-items:center;gap:12px;padding:10px 12px 18px}
+.mark{width:26px;height:26px;flex:none}
+.mark .m-a{fill:var(--accent)} .mark .m-b{fill:var(--text-2);opacity:.55} .mark .m-c{fill:var(--text-2);opacity:.32}
+.brand-name{font:600 17px/1 var(--font-display);letter-spacing:-.005em}
+.nav{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.nav button{position:relative;display:flex;align-items:center;gap:14px;width:100%;height:38px;padding:0 12px;border:0;border-radius:5px;
+  background:transparent;text-align:left;cursor:pointer;transition:background .15s ease-out}
+.nav button:hover{background:var(--nav-hover)}
+.nav button:active{background:var(--nav-active)}
+.nav button[aria-current=page]{background:var(--nav-active)}
+.nav button::before{content:"";position:absolute;left:0;top:50%;width:3px;height:0;border-radius:2px;background:var(--accent);transform:translateY(-50%);transition:height .2s ease-out}
+.nav button[aria-current=page]::before{height:16px}
+.side-foot{margin-top:auto;padding:8px 12px;color:var(--text-2);font-size:12px}
+
+main{overflow-y:auto;scrollbar-gutter:stable;min-width:0}
+.page{max-width:960px;padding:24px 40px 64px 28px}
+.page:not([hidden]){animation:enter .2s ease-out}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}}
+.banner{display:flex;align-items:center;gap:8px;width:fit-content;margin:16px 0 -8px 28px;padding:4px 10px;font-size:12px;color:var(--text-2);
+  background:var(--card);border:1px solid var(--line);border-radius:5px}
+.page-head h1{font:600 28px/1.25 var(--font-display);letter-spacing:-.01em;margin:8px 0 4px}
+.lede{color:var(--text-2);margin:0 0 20px;max-width:64ch}
+h2.gh{font:600 14px/1.4 var(--font);margin:0 0 8px 2px}
+.group{margin-top:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);overflow:hidden}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 16px;border-radius:5px;cursor:pointer;
+  background:var(--ctl);border:1px solid var(--ctl-line);border-bottom-color:var(--ctl-line-b);
+  transition:background .12s ease-out,transform .12s ease-out;white-space:nowrap}
+.btn:hover{background:var(--ctl-hover)}
+.btn:active{background:var(--ctl-press);transform:scale(.98)}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.primary:active{background:var(--accent-press)}
+.btn.danger{background:var(--danger-fill);border-color:transparent;color:#fff}
+.btn.danger:hover{filter:brightness(1.08)}
+.btn.subtle{background:transparent;border-color:transparent}
+.btn.subtle:hover{background:var(--nav-hover)}
+.btn:disabled{cursor:default;transform:none;background:var(--card-sub);border-color:var(--line);color:var(--text-3)}
+.icon-btn{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:5px;background:transparent;color:var(--text-2);cursor:pointer;
+  transition:background .12s ease-out,transform .12s ease-out}
+.icon-btn:hover{background:var(--nav-hover);color:var(--text)}
+.icon-btn:active{transform:scale(.94)}
+.field{height:34px;padding:0 12px;border-radius:5px;background:var(--ctl);border:1px solid var(--ctl-line);border-bottom-color:var(--ctl-line-b)}
+.field:focus{border-bottom:2px solid var(--accent)}
+
+/* keycaps */
+.keys{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+kbd{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:26px;height:26px;padding:0 7px;
+  font:600 12px/1 var(--font);color:var(--key-text);white-space:nowrap;
+  background:linear-gradient(var(--key-top),var(--key-bot));border:1px solid var(--key-line);border-bottom:2px solid var(--key-edge);border-radius:5px}
+kbd.sym{font-family:var(--font-mono);font-size:13px}
+kbd.arrow{font-size:13px}
+kbd.ghost{background:transparent;border:1px dashed var(--line-strong);color:var(--text-3)}
+.notset{display:inline-flex;align-items:center;height:26px;padding:0 10px;font-size:12px;color:var(--text-2);border:1px dashed var(--line-strong);border-radius:5px}
+
+/* ---------- shortcuts ---------- */
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px}
+.search{position:relative;flex:1;max-width:380px;min-width:220px}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-2);pointer-events:none}
+.search input{width:100%;padding-left:36px}
+.search input::placeholder{color:var(--text-3)}
+.count{margin:0;font-size:12px;color:var(--text-2)}
+.rows{list-style:none;margin:0;padding:0}
+.row:not([hidden]) ~ .row{border-top:1px solid var(--line)}
+.row-head{display:flex;align-items:center;transition:background .12s ease-out}
+.row-head:hover{background:var(--card-hover)}
+.row-main{flex:1;min-width:0;display:flex;align-items:center;gap:16px;padding:11px 8px 11px 16px;border:0;background:none;text-align:left;cursor:pointer}
+.row-main:focus-visible{outline-offset:-2px;border-radius:7px}
+.row-main:active .keys{transform:scale(.98)}
+.row-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.row-label{font-weight:600}
+.row-desc{color:var(--text-2);font-size:13px}
+.row-note{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12px;color:var(--text-3)}
+.row-note svg{width:13px;height:13px}
+.row-main .keys{flex:none;transition:transform .12s ease-out}
+.reset{flex:none;margin-right:10px;visibility:hidden}
+.row.changed .reset{visibility:visible}
+.row.open .row-head{background:var(--card-hover)}
+
+.editor{padding:4px 16px 16px;background:var(--card-sub);border-top:1px solid var(--line);animation:enter .16s ease-out}
+.ed-line{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+.mod{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 14px;border-radius:5px;cursor:pointer;font-weight:600;font-size:13px;
+  background:var(--ctl);border:1px solid var(--ctl-line);border-bottom-color:var(--ctl-line-b);transition:background .12s ease-out,color .12s ease-out,transform .12s ease-out}
+.mod:hover{background:var(--ctl-hover)}
+.mod:active{transform:scale(.98)}
+.mod[aria-pressed=true]{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.mod[aria-pressed=true]:hover{background:var(--accent-hover)}
+.ed-plus{color:var(--text-3);padding:0 2px}
+.keyfield{width:150px;height:32px;padding:0 12px;caret-color:transparent;cursor:pointer;font-weight:600}
+.keyfield::placeholder{color:var(--text-3);font-weight:400}
+.keyfield.listening{border-bottom:2px solid var(--accent);background:var(--card)}
+.ed-or{display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font-size:13px}
+.keysel{height:32px;padding:0 8px}
+.ed-hint{margin:8px 0 0;font-size:12px;color:var(--text-2)}
+.ed-preview{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:14px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:6px;min-height:48px}
+.ed-preview .lbl{font-size:12px;color:var(--text-2)}
+.ed-preview kbd{animation:pop .14s ease-out}
+@keyframes pop{from{transform:scale(.88);opacity:.4}}
+.ed-preview .row-note{margin:0}
+.ed-msg{display:flex;align-items:flex-start;gap:8px;margin:10px 0 0;font-size:13px}
+.ed-msg:empty{display:none}
+.ed-msg svg{margin-top:2px}
+.ed-msg.error{color:var(--danger)} .ed-msg.warn{color:var(--warn)} .ed-msg.info{color:var(--text-2)}
+.ed-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.spacer{flex:1}
+
+.empty{margin-top:24px;padding:32px 16px;text-align:center;color:var(--text-2)}
+.empty svg{width:28px;height:28px;margin-bottom:6px;color:var(--text-3)}
+.loading{color:var(--text-2);margin-top:24px}
+.foot{margin-top:32px}
+.set-row{display:flex;align-items:center;gap:16px;padding:14px 16px;min-height:64px}
+.set-row + .set-row{border-top:1px solid var(--line)}
+.set-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.set-title{font-weight:600}
+.set-desc{font-size:13px;color:var(--text-2)}
+.tile-ic{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:8px;background:var(--accent-soft);color:var(--accent-text)}
+.tile-ic svg.i{width:18px;height:18px}
+.tile-ic.frame{background:transparent;border:2px solid var(--accent)}
+
+/* ---------- mouse page ---------- */
+.info{list-style:none;margin:0;padding:0}
+.info-row{display:flex;gap:16px;padding:16px}
+.info-row + .info-row{border-top:1px solid var(--line)}
+.info-text{flex:1;min-width:0}
+.info-text h3{margin:6px 0 2px;font-size:14px;font-weight:600}
+.info-text p{margin:0;color:var(--text-2)}
+.info-text kbd,.info-text .notset,.about kbd{vertical-align:middle;margin:0 1px}
+.info-text .keys,.about .keys{display:inline-flex;vertical-align:middle}
+.zones{width:150px;height:96px;flex:none;align-self:center}
+.zones .t,.steps .t{fill:var(--tile);stroke:var(--line-strong)}
+.zones .z{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1}
+.zones .z.edge{stroke-dasharray:3 2}
+.zones text{fill:var(--accent-text);font:600 10px var(--font);text-anchor:middle}
+
+/* ---------- general / about ---------- */
+.switch{display:inline-flex;align-items:center;gap:12px;padding:4px;border:0;border-radius:5px;background:none;cursor:pointer}
+.switch[aria-busy=true]{cursor:progress}
+.sw-state{min-width:22px;text-align:right}
+.track{position:relative;width:40px;height:20px;border-radius:10px;border:1px solid var(--toggle-off);transition:background .16s ease-out,border-color .16s ease-out}
+.track::after{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--toggle-off);
+  transition:transform .16s ease-out,width .12s ease-out,height .12s ease-out,left .12s ease-out,top .12s ease-out}
+.switch:hover .track::after{width:14px;height:14px;left:2px;top:2px}
+.switch[aria-checked=true] .track{background:var(--accent);border-color:var(--accent)}
+.switch[aria-checked=true] .track::after{background:var(--on-accent);transform:translateX(20px)}
+.about-card{padding:20px}
+.about-card p{margin:0;max-width:66ch}
+.about-card p + p{margin-top:10px;color:var(--text-2)}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+.steps li{background:var(--card);padding:18px 18px 20px;display:flex;flex-direction:column;gap:10px}
+.steps svg{width:64px;height:40px;fill:none}
+.steps .t.new{fill:var(--accent-soft);stroke:var(--accent)}
+.steps .gone{stroke:var(--text-3);stroke-dasharray:3 3}
+.steps .arrow{stroke:var(--text-2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.steps h3{margin:0;font-size:14px;font-weight:600}
+.steps p{margin:0;color:var(--text-2);font-size:13px}
+
+/* ---------- toast + dialog ---------- */
+.toast{position:fixed;left:50%;bottom:24px;z-index:10;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:10px 16px;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);
+  opacity:0;transform:translate(-50%,12px);pointer-events:none;transition:opacity .18s ease-out,transform .18s ease-out}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .ti{color:var(--ok);display:flex}
+.toast.err .ti{color:var(--danger)}
+dialog{width:min(440px,calc(100vw - 32px));padding:0;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);box-shadow:var(--shadow-pop)}
+dialog[open]{animation:enter .18s ease-out}
+dialog::backdrop{background:var(--scrim)}
+.dlg-body{padding:24px}
+.dlg-body h2{font:600 20px/1.3 var(--font-display);margin:0 0 10px}
+.dlg-body p{margin:0;color:var(--text-2)}
+.dlg-foot{display:flex;gap:8px;padding:20px 24px;background:var(--bg);border-top:1px solid var(--line)}
+.dlg-foot .btn{flex:1}
+
+/* ---------- responsive ---------- */
+@media (max-width:1000px){.app{grid-template-columns:232px 1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .side{flex-direction:row;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+  .brand{padding:0 8px 0 4px}
+  .nav{flex-direction:row}
+  .nav button{width:auto;white-space:nowrap;gap:8px}
+  .nav button::before{left:50%;top:auto;bottom:2px;width:0;height:3px;transform:translateX(-50%);transition:width .2s ease-out}
+  .nav button[aria-current=page]::before{width:16px;height:3px}
+  .side-foot{display:none}
+  .page{padding:16px 16px 56px}
+  .banner{margin:12px 0 -4px 16px}
+  .steps{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .zones{display:none}
+  .brand-name{display:none}
+}
+@media (max-width:520px){
+  .row-main{flex-wrap:wrap;gap:8px}
+  .row-text{flex-basis:100%}
+  .row-main .keys{justify-content:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 28 28" aria-hidden="true"><rect class="m-a" x="2" y="2" width="11" height="11" rx="3"/><rect class="m-b" x="15" y="2" width="11" height="11" rx="3"/><rect class="m-b" x="2" y="15" width="11" height="11" rx="3"/><rect class="m-c" x="15" y="15" width="11" height="11" rx="3"/></svg>
+      <span class="brand-name">Tessera</span>
+    </div>
+    <nav aria-label="Settings pages">
+      <ul class="nav">
+        <li><button type="button" data-page="shortcuts" aria-current="page"><i data-ic="keyboard"></i>Shortcuts</button></li>
+        <li><button type="button" data-page="mouse"><i data-ic="mouse"></i>Mouse &amp; automatic</button></li>
+        <li><button type="button" data-page="general"><i data-ic="sliders"></i>General</button></li>
+        <li><button type="button" data-page="about"><i data-ic="info"></i>About</button></li>
+      </ul>
+    </nav>
+    <p class="side-foot" id="side-version"></p>
+  </aside>
+
+  <main id="main">
+    <div class="banner" id="banner" hidden><i data-ic="eye"></i><span id="banner-text">Preview — changes aren't saved</span></div>
+
+    <!-- Shortcuts -->
+    <section class="page" id="page-shortcuts" aria-labelledby="h-shortcuts">
+      <header class="page-head">
+        <h1 id="h-shortcuts">Shortcuts</h1>
+        <p class="lede">Every action can use any key combination. Click a shortcut to change it.</p>
+      </header>
+      <div class="toolbar">
+        <div class="search"><i data-ic="search"></i><input id="search" class="field" type="search" placeholder="Search actions or keys" aria-label="Search shortcuts" autocomplete="off" spellcheck="false"></div>
+        <p class="count" id="count"></p>
+      </div>
+      <div id="groups"><p class="loading">Loading shortcuts…</p></div>
+      <div class="empty" id="empty" hidden><i data-ic="search"></i><p>No shortcut matches “<span id="empty-q"></span>”.</p></div>
+      <div class="card foot">
+        <div class="set-row">
+          <span class="set-text"><span class="set-title">Reset all shortcuts</span><span class="set-desc">Put every action back on its original keys.</span></span>
+          <button type="button" class="btn" id="reset-all"><i data-ic="reset"></i>Reset all…</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mouse & automatic -->
+    <section class="page" id="page-mouse" aria-labelledby="h-mouse" hidden>
+      <header class="page-head">
+        <h1 id="h-mouse">Mouse &amp; automatic</h1>
+        <p class="lede">What you can do with the mouse, and what Tessera takes care of on its own.</p>
+      </header>
+      <section class="group" aria-labelledby="h-withmouse">
+        <h2 class="gh" id="h-withmouse">With the mouse</h2>
+        <ul class="card info">
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="move"></i></span>
+            <div class="info-text">
+              <h3>Drag a title bar</h3>
+              <p>Drop zones appear on the other tiles. The <strong>Swap</strong> box in the middle swaps the two windows, the <strong>Tab</strong> box near the top adds the window as a tab, and near an <strong>edge</strong> puts it on that side. <kbd>Esc</kbd> cancels.</p>
+            </div>
+            <svg class="zones" viewBox="0 0 150 96" aria-hidden="true">
+              <rect class="t" x="1" y="1" width="148" height="94" rx="6"/>
+              <rect class="z" x="48" y="8" width="54" height="18" rx="3"/><text x="75" y="21">Tab</text>
+              <rect class="z" x="48" y="34" width="54" height="28" rx="3"/><text x="75" y="52">Swap</text>
+              <rect class="z edge" x="7" y="22" width="10" height="52" rx="2"/>
+              <rect class="z edge" x="133" y="22" width="10" height="52" rx="2"/>
+              <rect class="z edge" x="40" y="79" width="70" height="9" rx="2"/>
+            </svg>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="resize"></i></span>
+            <div class="info-text"><h3>Drag a window border</h3><p>Resizes the tile. The neighbour adjusts to fit.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="tabs"></i></span>
+            <div class="info-text"><h3>Tab strip</h3><p>Click a tab to show it. Middle-click a tab to close it.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="max"></i></span>
+            <div class="info-text"><h3>Maximize</h3><p>Goes full screen for a moment. Restore puts the window back in its tile.</p></div>
+          </li>
+        </ul>
+      </section>
+      <section class="group" aria-labelledby="h-auto">
+        <h2 class="gh" id="h-auto">Automatic</h2>
+        <ul class="card info">
+          <li class="info-row">
+            <span class="tile-ic frame" aria-hidden="true"></span>
+            <div class="info-text"><h3>Blue border</h3><p>The focused window gets a blue border, so you always know where your shortcuts go.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="history"></i></span>
+            <div class="info-text"><h3>Layout memory</h3><p>Tile sizes, tab groups and which app is where are saved every few seconds, and restored after a restart as your apps open.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="ghost"></i></span>
+            <div class="info-text"><h3>Ghost windows</h3><p>Invisible or hidden windows never get a tile. If something odd still gets one, open the Window inspector (<span data-keys-for="inspector"></span>) to see the program behind it and ignore it for good.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="pause"></i></span>
+            <div class="info-text"><h3>Pause</h3><p>Pause with <span data-keys-for="pause"></span>. While paused, Windows gets all its own shortcuts back.</p></div>
+          </li>
+        </ul>
+      </section>
+    </section>
+
+    <!-- General -->
+    <section class="page" id="page-general" aria-labelledby="h-general" hidden>
+      <header class="page-head">
+        <h1 id="h-general">General</h1>
+        <p class="lede">How Tessera starts, and where it keeps its files.</p>
+      </header>
+      <div class="card">
+        <div class="set-row">
+          <span class="tile-ic"><i data-ic="power"></i></span>
+          <span class="set-text"><span class="set-title" id="startup-label">Start Tessera with Windows</span><span class="set-desc" id="startup-desc">Tessera starts quietly in the tray when you sign in.</span></span>
+          <button type="button" class="switch" id="startup" role="switch" aria-checked="false" aria-labelledby="startup-label" aria-describedby="startup-desc"><span class="sw-state" aria-hidden="true">Off</span><span class="track"></span></button>
+        </div>
+        <div class="set-row">
+          <span class="tile-ic"><i data-ic="folder"></i></span>
+          <span class="set-text"><span class="set-title" id="folder-label">Open Tessera folder</span><span class="set-desc" id="folder-desc">Your saved layout (<code>layout.json</code>), ignore list (<code>ignore.txt</code>) and shortcuts (<code>keys.json</code>) live here.</span></span>
+          <button type="button" class="btn" id="open-folder" aria-describedby="folder-desc">Open folder</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section class="page about" id="page-about" aria-labelledby="h-about" hidden>
+      <header class="page-head">
+        <h1 id="h-about">About Tessera</h1>
+        <p class="lede" id="about-version"></p>
+      </header>
+      <div class="card about-card">
+        <p>Tessera arranges your windows into tiles, so every window gets its own space and nothing hides behind anything else. It runs quietly in the tray, works across all your monitors, and you drive it with the keyboard or the mouse.</p>
+        <p>Open this window any time with <span data-keys-for="settings"></span>.</p>
+      </div>
+      <section class="group" aria-labelledby="h-how">
+        <h2 class="gh" id="h-how">How tiling works</h2>
+        <ol class="card steps">
+          <li>
+            <svg viewBox="0 0 64 40" aria-hidden="true"><rect class="t" x="1" y="1" width="30" height="38" rx="3"/><rect class="t new" x="33" y="1" width="30" height="38" rx="3"/></svg>
+            <h3>Open a window</h3><p>It gets a tile. The others make room.</p>
+          </li>
+          <li>
+            <svg viewBox="0 0 64 40" aria-hidden="true"><rect class="t" x="1" y="1" width="62" height="38" rx="3"/><path class="gone" d="M32 7v26"/></svg>
+            <h3>Close a window</h3><p>The others grow to fill the space.</p>
+          </li>
+          <li>
+            <svg viewBox="0 0 64 40" aria-hidden="true"><rect class="t new" x="1" y="1" width="30" height="38" rx="3"/><rect class="t" x="33" y="1" width="30" height="38" rx="3"/><path class="arrow" d="M14 20h36M45 15l5 5-5 5M19 15l-5 5 5 5"/></svg>
+            <h3>Rearrange</h3><p>Drag windows or use the keys to swap, resize, stack or tab them.</p>
+          </li>
+        </ol>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="ti" aria-hidden="true"></span><span class="tt"></span></div>
+
+<dialog id="confirm" aria-labelledby="dlg-title" aria-describedby="dlg-desc">
+  <form method="dialog">
+    <div class="dlg-body">
+      <h2 id="dlg-title">Reset all shortcuts?</h2>
+      <p id="dlg-desc">Every action goes back to its original keys. Any shortcuts you changed will be lost.</p>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn danger" value="reset">Reset all</button>
+      <button class="btn" value="cancel" autofocus>Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- icons (Lucide-style) ---------- */
+const P = {
+  keyboard:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/>',
+  mouse:'<path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/>',
+  sliders:'<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  reset:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  folder:'<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+  move:'<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',
+  resize:'<path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/>',
+  tabs:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v6"/>',
+  max:'<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/>',
+  ghost:'<path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/>',
+  pause:'<circle cx="12" cy="12" r="10"/><path d="M10 15V9M14 15V9"/>',
+  power:'<path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  check:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  win:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>'
+};
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+const WINLOGO = '<svg class="winlogo" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 1h6.6v6.6H1zM8.4 1H15v6.6H8.4zM1 8.4h6.6V15H1zM8.4 8.4H15V15H8.4z"/></svg>';
+for (const el of $$('[data-ic]')) el.outerHTML = ic(el.dataset.ic);
+
+/* ---------- keys: binding format "Win+Ctrl+Alt+Shift+Key" ---------- */
+const MODS = ['Win', 'Ctrl', 'Alt', 'Shift'];
+const CODE = {};
+for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') CODE['Key' + c] = c;
+for (let i = 0; i <= 9; i++) CODE['Digit' + i] = CODE['Numpad' + i] = String(i);
+for (let i = 1; i <= 24; i++) CODE['F' + i] = 'F' + i;
+Object.assign(CODE, {
+  ArrowLeft:'Left', ArrowUp:'Up', ArrowRight:'Right', ArrowDown:'Down',
+  PageUp:'PageUp', PageDown:'PageDown', Home:'Home', End:'End', Insert:'Insert', Delete:'Delete',
+  Space:'Space', Enter:'Enter', NumpadEnter:'Enter', Tab:'Tab',
+  Semicolon:';', Equal:'=', Comma:',', Minus:'-', Period:'.', Slash:'/', Backquote:'`',
+  BracketLeft:'[', Backslash:'\\', BracketRight:']', Quote:"'"
+});
+const KEYS = [...new Set(Object.values(CODE))];
+const KEY_LC = Object.fromEntries(KEYS.map(k => [k.toLowerCase(), k]));
+const MOD_CODES = /^(Shift|Control|Alt|Meta|OS)(Left|Right)$|^(CapsLock|NumLock|ScrollLock|ContextMenu)$/;
+const ARROWS = { Left:'←', Up:'↑', Right:'→', Down:'↓' };
+
+const WIN = {
+  'Win+D':'Show desktop', 'Win+E':'File Explorer', 'Win+R':'Run', 'Win+S':'Search', 'Win+V':'Clipboard history',
+  'Win+H':'Voice typing', 'Win+F':'Feedback Hub', 'Win+P':'Project to a screen', 'Win+I':'Settings',
+  'Win+L':'Lock', 'Win+A':'Quick settings', 'Win+N':'Notifications', 'Win+Tab':'Task view',
+  'Win+Left':'Snap windows', 'Win+Right':'Snap windows', 'Win+Up':'Snap windows', 'Win+Down':'Snap windows',
+  'Win+Shift+Left':'Move window to other monitor', 'Win+Shift+Right':'Move window to other monitor',
+  'Win+Ctrl+Left':'Switch virtual desktop', 'Win+Ctrl+Right':'Switch virtual desktop',
+  'Win+F1':'Windows help', 'Win+Alt+Up':'Snap top/bottom', 'Win+Alt+Down':'Snap top/bottom'
+};
+
+function parse(b) {
+  const r = { mods: { Win:false, Ctrl:false, Alt:false, Shift:false }, key: '' };
+  for (const raw of String(b || '').split('+')) {
+    const p = raw.trim(); if (!p) continue;
+    const m = MODS.find(x => x.toLowerCase() === p.toLowerCase());
+    if (m) r.mods[m] = true; else r.key = KEY_LC[p.toLowerCase()] || p;
+  }
+  return r;
+}
+const build = d => d.key ? MODS.filter(m => d.mods[m]).concat(d.key).join('+') : '';
+const norm = b => build(parse(b));
+console.assert(norm('shift+win+left') === 'Win+Shift+Left' && norm('') === '' && norm('Ctrl+Alt+;') === 'Ctrl+Alt+;', 'binding parser');
+
+function cap(part) {
+  if (part === 'Win') return `<kbd title="Windows key">${WINLOGO}<span class="sr">Win</span></kbd>`;
+  if (ARROWS[part]) return `<kbd class="arrow" title="${part} arrow"><span aria-hidden="true">${ARROWS[part]}</span><span class="sr">${part}</span></kbd>`;
+  return `<kbd${/^[^A-Za-z0-9]$/.test(part) ? ' class="sym"' : ''}>${esc(part)}</kbd>`;
+}
+function caps(b) {
+  if (!b) return '<span class="notset">Not set</span>';
+  const d = parse(b);
+  return `<span class="keys">${MODS.filter(m => d.mods[m]).concat(d.key).map(cap).join('')}</span>`;
+}
+const winNote = b => (b && WIN[b]) || '';
+
+/* ---------- sample data for preview mode ---------- */
+const DEFAULTS = [
+  ['focus-left','Moving around','Focus left','Focus the window to the left (also across monitors).','Win+Shift+Left'],
+  ['focus-up','Moving around','Focus up','Focus the window above.','Win+Shift+Up'],
+  ['focus-right','Moving around','Focus right','Focus the window to the right.','Win+Shift+Right'],
+  ['focus-down','Moving around','Focus down','Focus the window below.','Win+Shift+Down'],
+  ['swap-left','Moving around','Swap left','Swap the focused window with the one to its left (same monitor).','Win+Left'],
+  ['swap-up','Moving around','Swap up','Swap with the window above.','Win+Up'],
+  ['swap-right','Moving around','Swap right','Swap with the window to the right.','Win+Right'],
+  ['swap-down','Moving around','Swap down','Swap with the window below.','Win+Down'],
+  ['monitor-left','Moving around','Send to monitor left','Move the focused window to the monitor on the left.','Win+Alt+Shift+Left'],
+  ['monitor-up','Moving around','Send to monitor above','Move the focused window to the monitor above.','Win+Alt+Shift+Up'],
+  ['monitor-right','Moving around','Send to monitor right','Move the focused window to the monitor on the right.','Win+Alt+Shift+Right'],
+  ['monitor-down','Moving around','Send to monitor below','Move the focused window to the monitor below.','Win+Alt+Shift+Down'],
+  ['narrower','Sizes','Narrower','Make the focused window narrower.','Win+Alt+Left'],
+  ['shorter','Sizes','Shorter','Make the focused window shorter.','Win+Alt+Up'],
+  ['wider','Sizes','Wider','Make the focused window wider.','Win+Alt+Right'],
+  ['taller','Sizes','Taller','Make the focused window taller.','Win+Alt+Down'],
+  ['equalize','Sizes','Equal sizes','Make all tiles equal size again.','Win+Alt+E'],
+  ['split-beside','Layout','Open next beside','The next window you open goes beside the focused one.','Win+H'],
+  ['split-below','Layout','Open next below','The next window you open goes below the focused one.','Win+V'],
+  ['flip','Layout','Flip direction','Flip the focused group between side by side and stacked.','Win+D'],
+  ['float','Layout','Float / tile','Float the focused window (centered, on top) or put it back in the tiles.','Win+F'],
+  ['tabs','Tabs','Tab group','Turn the focused window into a tab group, or lay a tab group out side by side again.','Win+S'],
+  ['tab-next','Tabs','Next tab','Show the next tab of the group.','Win+PageDown'],
+  ['tab-prev','Tabs','Previous tab','Show the previous tab of the group.','Win+PageUp'],
+  ['inspector','Tools','Window inspector','See every managed window and its program; float, ignore, close or kill it.','Win+Shift+I'],
+  ['pause','Tools','Pause / resume','Pause tiling and give Windows its own shortcuts back.','Win+P'],
+  ['retile','Tools','Re-tile everything','Start over from scratch (resets sizes and tab groups, reloads the ignore list).','Win+Y'],
+  ['settings','Tools','Settings & help','Open this window.','Win+F1']
+].map(([id, section, label, description, keys]) => ({ id, section, label, description, keys, defaultKeys: keys }));
+
+/* ---------- API ---------- */
+const token = new URLSearchParams(location.search).get('t');
+let preview = !token;
+let S = { version: '', startup: false, actions: [] };
+const find = id => S.actions.find(a => a.id === id);
+
+async function api(method, path, body) {
+  const headers = { 'X-Tessera-Token': token };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  let data = null; try { data = await res.json(); } catch {}
+  if (!data) throw new Error(`Tessera didn't answer (${res.status}).`);
+  if (method === 'POST' && !data.ok) throw new Error(data.error || "Tessera couldn't do that.");
+  return data;
+}
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg, err = false) {
+  const t = $('#toast');
+  t.classList.toggle('err', err);
+  $('.ti', t).innerHTML = ic(err ? 'alert' : 'check');
+  $('.tt', t).textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), err ? 5000 : 3000);
+}
+const savedMsg = () => preview ? 'Saved in preview — Tessera wasn’t changed' : 'Saved — new keys work immediately';
+
+/* ---------- navigation ---------- */
+function showPage(p) {
+  for (const b of $$('.nav button')) b.dataset.page === p ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  for (const s of $$('.page')) s.hidden = s.id !== 'page-' + p;
+  $('#main').scrollTop = 0;
+}
+for (const b of $$('.nav button')) b.addEventListener('click', () => showPage(b.dataset.page));
+
+/* ---------- shortcuts list ---------- */
+function rowHTML(a) {
+  const note = winNote(a.keys);
+  return `<li class="row${a.keys !== a.defaultKeys ? ' changed' : ''}" data-id="${esc(a.id)}">
+    <div class="row-head">
+      <button type="button" class="row-main" aria-expanded="false" aria-controls="ed-${esc(a.id)}">
+        <span class="row-text">
+          <span class="row-label">${esc(a.label)}</span>
+          <span class="row-desc">${esc(a.description)}</span>
+          ${note ? `<span class="row-note">${ic('info')}Replaces Windows: ${esc(note)}</span>` : ''}
+        </span>
+        ${caps(a.keys)}
+      </button>
+      <button type="button" class="icon-btn reset" data-reset title="Reset to default (${esc(a.defaultKeys || 'Not set')})" aria-label="Reset ${esc(a.label)} to default">${ic('reset')}</button>
+    </div>
+  </li>`;
+}
+function renderShortcuts() {
+  if (ed) closeEditor(false);
+  const order = [], by = {};
+  for (const a of S.actions) { if (!by[a.section]) { by[a.section] = []; order.push(a.section); } by[a.section].push(a); }
+  $('#groups').innerHTML = order.map((s, i) => `<section class="group" aria-labelledby="g${i}">
+      <h2 class="gh" id="g${i}">${esc(s)}</h2><ul class="card rows">${by[s].map(rowHTML).join('')}</ul></section>`).join('');
+  const changed = S.actions.filter(a => a.keys !== a.defaultKeys).length;
+  $('#count').textContent = `${S.actions.length} actions · ${changed ? changed + ' changed from default' : 'all on defaults'}`;
+  applyFilter();
+}
+function renderRefs() {
+  for (const el of $$('[data-keys-for]')) { const a = find(el.dataset.keysFor); el.innerHTML = a ? caps(a.keys) : ''; }
+}
+const renderAll = () => { renderShortcuts(); renderRefs(); };
+const rowFor = id => $$('.row').find(li => li.dataset.id === id);
+
+function applyFilter() {
+  const q = $('#search').value.trim().toLowerCase();
+  const terms = q.split(/\s+/).filter(Boolean);
+  let shown = 0;
+  for (const g of $$('#groups .group')) {
+    let n = 0;
+    for (const li of $$('.row', g)) {
+      const a = find(li.dataset.id);
+      const hay = [a.label, a.description, a.section, a.keys, a.keys.replace(/\+/g, ' '), winNote(a.keys), a.keys ? '' : 'not set'].join(' ').toLowerCase();
+      li.hidden = !terms.every(t => hay.includes(t));
+      if (!li.hidden) n++;
+    }
+    g.hidden = !n; shown += n;
+  }
+  $('#empty').hidden = shown > 0 || !S.actions.length;
+  $('#empty-q').textContent = q;
+}
+$('#search').addEventListener('input', applyFilter);
+
+$('#groups').addEventListener('click', e => {
+  const li = e.target.closest('.row'); if (!li) return;
+  if (e.target.closest('[data-reset]')) return resetOne(li.dataset.id);
+  if (e.target.closest('.row-main')) ed && ed.id === li.dataset.id ? closeEditor() : openEditor(li);
+});
+
+/* ---------- saving ---------- */
+async function commit(id, binding) {
+  const map = {}, cleared = [];
+  for (const a of S.actions) map[a.id] = a.keys;
+  if (binding) for (const a of S.actions) if (a.id !== id && a.keys === binding) { map[a.id] = ''; cleared.push(a.label); }
+  map[id] = binding;
+  if (!preview) await api('POST', '/api/keys', map);
+  for (const a of S.actions) a.keys = map[a.id];
+  return cleared;
+}
+function afterCommit(id, cleared, msg) {
+  renderAll();
+  const li = rowFor(id); if (li) $('.row-main', li).focus();
+  toast(msg + (cleared.length ? `. ${cleared.join(', ')} ${cleared.length > 1 ? 'are' : 'is'} now not set.` : ''));
+}
+async function resetOne(id) {
+  const a = find(id);
+  try { afterCommit(id, await commit(id, a.defaultKeys), `${a.label} is back to its default`); }
+  catch (err) { toast(err.message, true); }
+}
+
+/* ---------- inline editor ---------- */
+let ed = null; // { id, mods, key, bad, li, el }
+function editorHTML(a) {
+  const groups = [['Letters', /^[A-Z]$/], ['Numbers', /^\d$/], ['Function keys', /^F\d+$/],
+    ['Navigation & editing', /^(Left|Up|Right|Down|PageUp|PageDown|Home|End|Insert|Delete|Space|Enter|Tab)$/], ['Symbols', /^[^A-Za-z0-9]$/]];
+  const opts = groups.map(([label, re]) => `<optgroup label="${label}">${KEYS.filter(k => re.test(k)).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}</optgroup>`).join('');
+  const hid = 'hint-' + esc(a.id);
+  return `<div class="ed-line">
+      <span role="group" aria-label="Modifier keys" class="ed-line" style="margin:0">
+        ${MODS.map(m => `<button type="button" class="mod" data-mod="${m}" aria-pressed="false">${m === 'Win' ? WINLOGO : ''}${m}</button>`).join('')}
+      </span>
+      <span class="ed-plus" aria-hidden="true">+</span>
+      <input class="field keyfield" type="text" readonly aria-label="Key — focus and press a key" aria-describedby="${hid}">
+      <label class="ed-or">or pick <select class="field keysel" aria-label="Key from list"><option value="">—</option>${opts}</select></label>
+    </div>
+    <p class="ed-hint" id="${hid}">Press one key without holding Win (Windows would catch it); turn Win on above instead. Ctrl, Alt or Shift you hold are picked up. Esc cancels.</p>
+    <div class="ed-preview"><span class="lbl">New shortcut</span><span class="pv"></span><span class="pv-note"></span></div>
+    <p class="ed-msg" role="alert"></p>
+    <div class="ed-actions">
+      <button type="button" class="btn primary" data-act="save">Save</button>
+      <button type="button" class="btn" data-act="cancel">Cancel</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn subtle" data-act="clear">Clear</button>
+      <button type="button" class="btn subtle" data-act="default">${ic('reset')}Reset to default</button>
+    </div>`;
+}
+function openEditor(li) {
+  if (ed) closeEditor(false);
+  const a = find(li.dataset.id), p = parse(a.keys);
+  const el = document.createElement('div');
+  el.className = 'editor'; el.id = 'ed-' + a.id; el.innerHTML = editorHTML(a);
+  li.appendChild(el); li.classList.add('open');
+  $('.row-main', li).setAttribute('aria-expanded', 'true');
+  ed = { id: a.id, mods: { ...p.mods }, key: p.key, bad: false, li, el };
+  wireEditor(el);
+  $('.keyfield', el).focus();
+  updateEditor();
+}
+function closeEditor(focusRow = true) {
+  if (!ed) return;
+  const { li, el } = ed; ed = null;
+  el.remove(); li.classList.remove('open');
+  const btn = $('.row-main', li); btn.setAttribute('aria-expanded', 'false');
+  if (focusRow) btn.focus();
+}
+function validate() {
+  const b = build(ed);
+  if (!ed.key) return { blocking: true, level: 'info', html: 'Press a key or pick one from the list.' };
+  if (!MODS.some(m => ed.mods[m])) return { blocking: true, level: 'error', html: 'Add Win, Ctrl, Alt or Shift so normal typing keeps working.' };
+  if (b === 'Win+L') return { blocking: true, level: 'error', html: 'Win+L always locks the PC — Windows keeps it. Choose another key.' };
+  const other = S.actions.find(x => x.id !== ed.id && x.keys === b);
+  if (other) return { blocking: false, level: 'warn', html: `Already used by <strong>${esc(other.label)}</strong> — saving will clear it there.` };
+  return { blocking: false, level: '', html: '' };
+}
+function setMsg(level, html) {
+  const m = $('.ed-msg', ed.el);
+  const full = html ? ic(level === 'info' ? 'info' : 'alert') + `<span>${html}</span>` : '';
+  if (m.innerHTML !== full) { m.className = 'ed-msg ' + level; m.innerHTML = full; }
+}
+function updateEditor() {
+  const el = ed.el, a = find(ed.id), b = build(ed), kf = $('.keyfield', el);
+  for (const c of $$('.mod', el)) c.setAttribute('aria-pressed', String(ed.mods[c.dataset.mod]));
+  const listening = document.activeElement === kf;
+  kf.classList.toggle('listening', listening);
+  kf.value = listening ? '' : ed.key;
+  kf.placeholder = listening ? 'Press a key…' : 'No key';
+  $('.keysel', el).value = ed.key;
+  const parts = MODS.filter(m => ed.mods[m]);
+  const pv = b ? caps(b) : (parts.length ? `<span class="keys">${parts.map(cap).join('')}<kbd class="ghost">?</kbd></span>` : '<span class="notset">Not set</span>');
+  const pvEl = $('.pv', el); if (pvEl.innerHTML !== pv) pvEl.innerHTML = pv;
+  const note = b !== 'Win+L' && winNote(b);
+  $('.pv-note', el).innerHTML = note ? `<span class="row-note">${ic('info')}Replaces Windows: ${esc(note)}</span>` : '';
+  const v = validate();
+  if (ed.bad) setMsg('error', 'That key can’t be used. Try a letter, number, F-key, arrow or another key from the list.');
+  else if (!ed.saveError) setMsg(v.level, v.html);
+  $('[data-act=save]', el).disabled = v.blocking || ed.busy;
+  $('[data-act=clear]', el).disabled = !a.keys || ed.busy;
+  $('[data-act=default]', el).disabled = a.keys === a.defaultKeys || ed.busy;
+}
+function wireEditor(el) {
+  const kf = $('.keyfield', el);
+  el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeEditor(); } });
+  kf.addEventListener('focus', updateEditor);
+  kf.addEventListener('blur', () => ed && updateEditor());
+  kf.addEventListener('keydown', e => {
+    // Tab is left for focus movement (no keyboard trap); it can still be chosen from the list.
+    if (e.key === 'Escape' || e.code === 'Tab') return;
+    e.preventDefault();
+    if (MOD_CODES.test(e.code)) return;
+    const k = CODE[e.code];
+    ed.saveError = false;
+    if (!k) { ed.bad = true; return updateEditor(); }
+    ed.bad = false; ed.key = k;
+    if (e.ctrlKey) ed.mods.Ctrl = true;
+    if (e.altKey) ed.mods.Alt = true;
+    if (e.shiftKey) ed.mods.Shift = true;
+    updateEditor();
+  });
+  $('.keysel', el).addEventListener('change', e => { ed.key = e.target.value; ed.bad = ed.saveError = false; updateEditor(); });
+  el.addEventListener('click', e => {
+    const mod = e.target.closest('.mod');
+    if (mod) { ed.mods[mod.dataset.mod] = !ed.mods[mod.dataset.mod]; ed.bad = ed.saveError = false; return updateEditor(); }
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    const a = find(ed.id);
+    if (act === 'cancel') closeEditor();
+    else if (act === 'save') { const b = build(ed); b === a.keys ? closeEditor() : save(b); }
+    else if (act === 'clear') save('');
+    else if (act === 'default') save(a.defaultKeys);
+  });
+}
+async function save(binding) {
+  const cur = ed, saveBtn = $('[data-act=save]', cur.el);
+  cur.busy = true; cur.saveError = false; saveBtn.textContent = 'Saving…'; updateEditor();
+  try {
+    const cleared = await commit(cur.id, binding);
+    afterCommit(cur.id, cleared, savedMsg());
+  } catch (err) {
+    if (ed !== cur) return toast(err.message, true);
+    cur.busy = false; cur.saveError = true; saveBtn.textContent = 'Save';
+    updateEditor();
+    setMsg('error', esc(err.message));
+  }
+}
+
+/* ---------- reset all ---------- */
+const dlg = $('#confirm');
+$('#reset-all').addEventListener('click', () => { dlg.returnValue = ''; dlg.showModal(); });
+dlg.addEventListener('close', async () => {
+  if (dlg.returnValue !== 'reset') return;
+  const map = Object.fromEntries(S.actions.map(a => [a.id, a.defaultKeys]));
+  try {
+    if (!preview) await api('POST', '/api/keys', map);
+    for (const a of S.actions) a.keys = a.defaultKeys;
+    renderAll();
+    toast('All shortcuts are back to their defaults');
+  } catch (err) { toast(err.message, true); }
+});
+
+/* ---------- general ---------- */
+const sw = $('#startup');
+function setSwitch(on) { sw.setAttribute('aria-checked', String(on)); $('.sw-state', sw).textContent = on ? 'On' : 'Off'; }
+sw.addEventListener('click', async () => {
+  if (sw.getAttribute('aria-busy') === 'true') return;
+  const next = !S.startup;
+  setSwitch(next); sw.setAttribute('aria-busy', 'true');
+  try {
+    if (!preview) await api('POST', '/api/startup', { enabled: next });
+    S.startup = next;
+    toast(next ? 'Tessera will start with Windows' : 'Tessera won’t start with Windows');
+  } catch (err) { setSwitch(S.startup); toast(err.message, true); }
+  finally { sw.removeAttribute('aria-busy'); }
+});
+$('#open-folder').addEventListener('click', async () => {
+  if (preview) return toast('Preview — the folder opens from the real Tessera window', true);
+  try { await api('POST', '/api/open-folder'); toast('Opened the Tessera folder'); }
+  catch (err) { toast(err.message, true); }
+});
+
+/* ---------- start ---------- */
+(async () => {
+  if (token) {
+    try {
+      const d = await api('GET', '/api/state');
+      if (!Array.isArray(d.actions)) throw new Error('bad state');
+      S = { version: d.version || '', startup: !!d.startup,
+            actions: d.actions.map(a => ({ ...a, keys: norm(a.keys), defaultKeys: norm(a.defaultKeys) })) };
+    } catch {
+      preview = true;
+      $('#banner-text').textContent = 'Couldn’t reach Tessera — preview, changes aren’t saved';
+    }
+  }
+  if (preview) S = { version: '', startup: true, actions: DEFAULTS.map(a => ({ ...a })) };
+  $('#banner').hidden = !preview;
+  setSwitch(S.startup);
+  const v = S.version ? `Version ${S.version}` : '';
+  $('#side-version').textContent = v;
+  $('#about-version').textContent = v ? `${v} · A tiling window manager for Windows 11` : 'A tiling window manager for Windows 11';
+  renderAll();
+})();
+})();
+</script>
+</body>
+</html>

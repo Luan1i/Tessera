@@ -1,0 +1,2 @@
+# build output, plus per-machine layout.json / ignore.txt that live next to the exe
+bin/
