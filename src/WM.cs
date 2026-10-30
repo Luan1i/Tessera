@@ -42,6 +42,7 @@ namespace Tessera
 
         readonly Dictionary<string, Node> roots = new Dictionary<string, Node>(); // one tree per monitor
         readonly HashSet<IntPtr> floating = new HashSet<IntPtr>();
+        readonly HashSet<IntPtr> seen = new HashSet<IntPtr>(); // app rules apply once, when a window first shows up
         Dictionary<IntPtr, Rectangle> layout = new Dictionary<IntPtr, Rectangle>();
         IntPtr lastFocus;
         public bool Paused;
@@ -131,6 +132,18 @@ namespace Tessera
             Native.EnumWindows((h, l) => { if (IsTileable(h)) live.Add(h); return true; }, IntPtr.Zero);
             var liveSet = new HashSet<IntPtr>(live);
             floating.RemoveWhere(h => !Native.IsWindow(h));
+            seen.RemoveWhere(h => !Native.IsWindow(h));
+            var fresh = new Dictionary<IntPtr, string>(); // windows seen for the first time, with their app
+            foreach (var h in live)
+            {
+                if (seen.Contains(h)) continue;
+                var app = Native.AppName(h);
+                if (app == "ApplicationFrameHost") continue; // a Store app still starting inside its frame: look again next time
+                seen.Add(h);
+                fresh[h] = app;
+            }
+            foreach (var kv in fresh)
+                if (Rules.Find(kv.Value, "float") != null) floating.Add(kv.Key); // left where the app put it
 
             var changed = new HashSet<string>(); // monitors that gained or lost a window
             foreach (var kv in roots)
@@ -163,7 +176,18 @@ namespace Tessera
             foreach (var h in live)
             {
                 if (floating.Contains(h) || FindLeaf(h) != null) continue;
-                string name = Native.DisplayOf(h).Name;
+                string app;
+                fresh.TryGetValue(h, out app);
+                Node mate = app != null && Rules.Find(app, "tabs") != null ? SameApp(h, app) : null;
+                if (mate != null)
+                {
+                    Tree.AddTab(mate, h);
+                    mate.Parent.ActiveTab = h;
+                    changed.Add(MonitorOf(h));
+                    continue;
+                }
+                var onMonitor = app != null ? Rules.Find(app, "monitor") : null;
+                string name = onMonitor != null && roots.ContainsKey(onMonitor.Monitor) ? onMonitor.Monitor : Native.DisplayOf(h).Name;
                 Node root;
                 if (!roots.TryGetValue(name, out root)) continue;
                 var at = Tree.Find(root, lastFocus); // the focused window, if it's on this monitor
@@ -189,6 +213,15 @@ namespace Tessera
             }
             NoteFocus(Native.GetForegroundWindow()); // a new window opened in a tab group becomes its active tab
             Apply();
+        }
+
+        // A tiled window of the same app for h to join as a tab: the focused one if it is one, else the first found.
+        Node SameApp(IntPtr h, string app)
+        {
+            var leaves = new List<Node>();
+            foreach (var root in roots.Values) Tree.Leaves(root, leaves);
+            var mates = leaves.Where(n => n.Hwnd != h && string.Equals(Native.AppName(n.Hwnd), app, StringComparison.OrdinalIgnoreCase)).ToList();
+            return mates.FirstOrDefault(n => n.Hwnd == lastFocus) ?? mates.FirstOrDefault();
         }
 
         bool Auto(string monitor) { return Mode != "manual" && !handMade.Contains(monitor); }
@@ -573,10 +606,12 @@ namespace Tessera
         {
             StopRestoring();
             Ignore.Load();
+            Rules.Load();
             roots.Clear();
             handMade.Clear();
             splitNext = null;
             floating.Clear();
+            seen.Clear(); // the rules apply to every open window again
             layout.Clear();
             Sync();
         }

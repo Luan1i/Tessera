@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -33,7 +35,12 @@ namespace Tessera
             ui = SynchronizationContext.Current; // created on the UI thread; API work runs there
         }
 
-        public void Open()
+        public void Open() { Open(""); }
+
+        // Opens the App rules page with a new rule for this app filled in.
+        public void OpenRules(string app) { Open("&page=rules&app=" + Uri.EscapeDataString(app)); }
+
+        void Open(string query)
         {
             if (listener == null)
             {
@@ -42,7 +49,7 @@ namespace Tessera
                 port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 new Thread(Serve) { IsBackground = true, Name = "settings" }.Start();
             }
-            var url = "http://127.0.0.1:" + port + "/?t=" + token;
+            var url = "http://127.0.0.1:" + port + "/?t=" + token + query;
             var edge = EdgePath();
             if (edge != null) Process.Start(edge, "--app=" + url + " --window-size=1040,780");
             else Process.Start(url); // default browser
@@ -87,6 +94,7 @@ namespace Tessera
                     else if (method == "GET" && route == "/") Write(stream, "200 OK", "text/html; charset=utf-8", Page());
                     else if (!route.StartsWith("/api/")) Write(stream, "404 Not Found", "text/plain", "Not found");
                     else if (sentToken != token) Write(stream, "403 Forbidden", "text/plain", "Forbidden");
+                    else if (method == "GET" && route == "/api/apps") Write(stream, "200 OK", "application/json; charset=utf-8", Apps()); // slow: kept off the UI thread
                     else
                     {
                         string result = null;
@@ -108,6 +116,12 @@ namespace Tessera
                         version = typeof(Startup).Assembly.GetName().Version.ToString(3),
                         startup = Startup.Enabled(),
                         layout = wm.Mode,
+                        rules = Rules.All,
+                        monitors = System.Windows.Forms.Screen.AllScreens.OrderBy(s => s.DeviceName).Select(s => new
+                        {
+                            name = s.DeviceName,
+                            label = "Monitor " + s.DeviceName.Replace(@"\\.\DISPLAY", "") + " · " + s.Bounds.Width + " × " + s.Bounds.Height + (s.Primary ? " · main" : ""),
+                        }),
                         actions = actions.Select(a => new { id = a.Id, section = a.Section, label = a.Label, description = a.Description, keys = a.Keys, defaultKeys = a.Default }),
                     });
                 if (method == "POST" && route == "/api/keys")
@@ -134,6 +148,11 @@ namespace Tessera
                     bool ok = request != null && request.TryGetValue("layout", out layout) && layout is string && wm.SetLayout((string)layout);
                     return json.Serialize(new { ok, error = ok ? null : "Unknown layout." });
                 }
+                if (method == "POST" && route == "/api/rules")
+                {
+                    Rules.Save(json.Deserialize<List<Rule>>(body));
+                    return json.Serialize(new { ok = true, rules = Rules.All });
+                }
                 if (method == "POST" && route == "/api/open-folder")
                 {
                     Process.Start("explorer.exe", "\"" + AppDomain.CurrentDomain.BaseDirectory + "\"");
@@ -142,6 +161,79 @@ namespace Tessera
                 return json.Serialize(new { ok = false, error = "Unknown request." });
             }
             catch (Exception e) { return json.Serialize(new { ok = false, error = e.Message }); }
+        }
+
+        // For the rules page's app picker: apps with a window open now, and apps from the Start menu.
+        string Apps()
+        {
+            List<string> open = null;
+            ui.Send(_ => open = wm.Tracked().Select(w => Native.ProcessPath(Native.AppPid(w.Key))).Where(p => p.Length > 0).ToList(), null);
+            Dictionary<string, string> installed = null;
+            var t = new Thread(() => installed = StartMenuApps()); // the shortcut reader is a COM object that wants an STA thread
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            return new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(new
+            {
+                open = open.GroupBy(p => Path.GetFileNameWithoutExtension(p), StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new { name = g.Key, title = AppTitle(g.First(), g.Key), icon = IconData(g.First()) })
+                    .OrderBy(a => a.title, StringComparer.OrdinalIgnoreCase),
+                installed = installed.Select(kv => new { name = Path.GetFileNameWithoutExtension(kv.Key), title = kv.Value, icon = IconData(kv.Key) })
+                    .OrderBy(a => a.title, StringComparer.OrdinalIgnoreCase),
+            });
+        }
+
+        // exe path -> shortcut name, for every Start menu shortcut to a program (uninstallers left out).
+        static Dictionary<string, string> StartMenuApps()
+        {
+            var apps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
+                foreach (var dir in new[] { Environment.SpecialFolder.CommonPrograms, Environment.SpecialFolder.Programs })
+                    foreach (var lnk in Directory.GetFiles(Environment.GetFolderPath(dir), "*.lnk", SearchOption.AllDirectories))
+                    {
+                        var title = Path.GetFileNameWithoutExtension(lnk);
+                        string target;
+                        try
+                        {
+                            var s = shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { lnk });
+                            target = (string)s.GetType().InvokeMember("TargetPath", BindingFlags.GetProperty, null, s, null);
+                        }
+                        catch (Exception) { continue; } // broken shortcut
+                        if (title.IndexOf("uninstall", StringComparison.OrdinalIgnoreCase) >= 0 || Path.GetFileName(target).StartsWith("unins", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(target) && !apps.ContainsKey(target)) apps[target] = title;
+                    }
+            }
+            catch (Exception) { } // no Start menu access: just the open apps
+            return apps;
+        }
+
+        static string AppTitle(string path, string name)
+        {
+            try
+            {
+                var v = FileVersionInfo.GetVersionInfo(path);
+                foreach (var t in new[] { v.FileDescription, v.ProductName })
+                    if (!string.IsNullOrWhiteSpace(t) && !t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return t.Trim();
+            }
+            catch (Exception) { } // unreadable file: fall back to the program name
+            return name;
+        }
+
+        static string IconData(string path)
+        {
+            try
+            {
+                using (var icon = Icon.ExtractAssociatedIcon(path))
+                using (var bmp = icon.ToBitmap())
+                using (var m = new MemoryStream())
+                {
+                    bmp.Save(m, ImageFormat.Png);
+                    return "data:image/png;base64," + Convert.ToBase64String(m.ToArray());
+                }
+            }
+            catch (Exception) { return null; } // e.g. a Store app whose folder can't be read: the page shows a plain icon
         }
 
         static byte[] page;

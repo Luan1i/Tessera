@@ -66,6 +66,7 @@ namespace Tessera
         [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
 
         [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+        [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent, EnumWindowsProc cb, IntPtr lParam);
         [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr h);
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
@@ -135,6 +136,18 @@ namespace Tessera
             GetWindowThreadProcessId(h, out pid);
             return pid;
         }
+
+        // The program behind a window. Store apps (Calculator, Settings…) draw inside a frame owned by
+        // ApplicationFrameHost; the app itself owns a child window of that frame.
+        public static uint AppPid(IntPtr h)
+        {
+            uint pid = Pid(h), inner = pid;
+            if (ClassName(h) == "ApplicationFrameWindow")
+                EnumChildWindows(h, (c, l) => { uint p = Pid(c); if (p == pid) return true; inner = p; return false; }, IntPtr.Zero);
+            return inner;
+        }
+
+        public static string AppName(IntPtr h) { return ProcessName(AppPid(h)); }
 
         // The rectangle you actually see, without the invisible resize border.
         public static Rectangle VisibleRect(IntPtr h)

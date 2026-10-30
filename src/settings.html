@@ -124,7 +124,7 @@ kbd.ghost{background:transparent;border:1px dashed var(--line-strong);color:var(
 
 /* ---------- shortcuts ---------- */
 .toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px}
-.search{position:relative;flex:1;max-width:380px;min-width:220px}
+.search{position:relative;flex:1;max-width:380px;min-width:min(220px,100%)}
 .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-2);pointer-events:none}
 .search input{width:100%;padding-left:36px}
 .search input::placeholder{color:var(--text-3)}
@@ -215,6 +215,37 @@ kbd.ghost{background:transparent;border:1px dashed var(--line-strong);color:var(
 .lay-name .on{font-size:12px;font-weight:600;color:var(--accent-text)}
 .lay-desc{font-size:13px;color:var(--text-2)}
 
+/* ---------- app rules ---------- */
+.rules{list-style:none;margin:0;padding:0}
+.rules-empty{margin:0;padding:20px 16px;color:var(--text-2)}
+.rule-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;padding:16px}
+.rule-form > label{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;min-width:0;font-size:13px;font-weight:600}
+.rule-form .field{width:100%;font-weight:400}
+.pick{flex:1 1 100%;min-width:0;margin:0;padding:0;border:0}
+.pick legend{padding:0;font-size:13px;font-weight:600}
+.pick-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:2px 0 8px}
+.apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;max-height:320px;overflow-y:auto;padding:2px}
+.apps-h{grid-column:1/-1;margin:6px 2px 0;font-size:12px;font-weight:600;color:var(--text-2)}
+.apps-h:first-child{margin-top:0}
+.apps-msg{grid-column:1/-1;margin:4px 2px;font-size:13px;color:var(--text-2)}
+.app-chip{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 10px;border-radius:6px;cursor:pointer;
+  background:var(--ctl);border:1px solid var(--ctl-line);transition:background .12s ease-out,border-color .12s ease-out}
+.app-chip:hover{background:var(--ctl-hover)}
+.app-chip:has(:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.app-chip:has(:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
+.app-chip input{position:absolute;opacity:0;pointer-events:none}
+.app-chip img,.app-chip .app-noic{width:24px;height:24px;flex:none}
+.app-noic{display:grid;place-items:center;color:var(--text-2)}
+.app-t{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.app-t b,.app-t small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-t b{font-weight:600;font-size:13px}
+.app-t small{font-size:12px;color:var(--text-2)}
+#rule-app{margin-top:8px;width:min(100%,320px)}
+.rule-app-ic{width:16px;height:16px;vertical-align:-3px;margin-right:6px}
+.rule-hint{margin:8px 2px 0;font-size:12px;color:var(--text-2);max-width:76ch}
+.rule-hint kbd,.rule-hint .notset{vertical-align:middle;margin:0 1px}
+.rule-hint .keys{display:inline-flex;vertical-align:middle}
+
 /* ---------- general / about ---------- */
 .switch{display:inline-flex;align-items:center;gap:12px;padding:4px;border:0;border-radius:5px;background:none;cursor:pointer}
 .switch[aria-busy=true]{cursor:progress}
@@ -293,6 +324,7 @@ dialog::backdrop{background:var(--scrim)}
       <ul class="nav">
         <li><button type="button" data-page="shortcuts" aria-current="page"><i data-ic="keyboard"></i>Shortcuts</button></li>
         <li><button type="button" data-page="layout"><i data-ic="layout"></i>Layout</button></li>
+        <li><button type="button" data-page="rules"><i data-ic="rules"></i>App rules</button></li>
         <li><button type="button" data-page="mouse"><i data-ic="mouse"></i>Mouse &amp; automatic</button></li>
         <li><button type="button" data-page="general"><i data-ic="sliders"></i>General</button></li>
         <li><button type="button" data-page="about"><i data-ic="info"></i>About</button></li>
@@ -349,6 +381,61 @@ dialog::backdrop{background:var(--scrim)}
           <li class="info-row">
             <span class="tile-ic"><i data-ic="resize"></i></span>
             <div class="info-text"><h3>Sizes</h3><p>Tiles you resize go back to even shares the next time a window opens or closes, except on monitors you arranged by hand and in Manual.</p></div>
+          </li>
+        </ul>
+      </section>
+    </section>
+
+    <!-- App rules -->
+    <section class="page" id="page-rules" aria-labelledby="h-rules" hidden>
+      <header class="page-head">
+        <h1 id="h-rules">App rules</h1>
+        <p class="lede">Decide what happens when an app opens a window: let it float, send it to a certain monitor, or keep its windows together as tabs.</p>
+      </header>
+      <div class="card">
+        <ul class="rules" id="rules" aria-label="Your rules"></ul>
+        <p class="rules-empty" id="rules-empty" hidden>No rules yet. Every app is tiled the normal way.</p>
+      </div>
+      <section class="group" aria-labelledby="h-rule-new">
+        <h2 class="gh" id="h-rule-new">Add a rule</h2>
+        <form class="card rule-form" id="rule-form">
+          <fieldset class="pick">
+            <legend>App</legend>
+            <div class="pick-head">
+              <div class="search"><i data-ic="search"></i><input id="app-search" class="field" type="search" placeholder="Search apps" aria-label="Search apps" autocomplete="off" spellcheck="false"></div>
+              <button type="button" class="btn subtle" id="rule-refresh"><i data-ic="reset"></i>Refresh list</button>
+            </div>
+            <div class="apps" id="rule-apps"></div>
+            <input class="field" id="rule-app" hidden autocomplete="off" spellcheck="false" placeholder="Program name, e.g. spotify" aria-label="Program name">
+          </fieldset>
+          <label>When it opens a window
+            <select class="field" id="rule-action">
+              <option value="float">Float it (don't tile)</option>
+              <option value="monitor">Put it on a monitor</option>
+              <option value="tabs">Add it as a tab to its other windows</option>
+            </select>
+          </label>
+          <label id="rule-monitor-wrap" hidden>Monitor
+            <select class="field" id="rule-monitor"></select>
+          </label>
+          <button type="submit" class="btn primary"><i data-ic="plus"></i>Add rule</button>
+        </form>
+        <p class="rule-hint">Tip: in the Window inspector (<span data-keys-for="inspector"></span>), select a window and click <strong>Make a rule…</strong> to come here with its app already picked.</p>
+      </section>
+      <section class="group" aria-labelledby="h-rules-more">
+        <h2 class="gh" id="h-rules-more">Good to know</h2>
+        <ul class="card info">
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="history"></i></span>
+            <div class="info-text"><h3>Windows that open from now on</h3><p>Rules apply when a window opens. To apply them to windows that are already open, re-tile with <span data-keys-for="retile"></span>.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="float"></i></span>
+            <div class="info-text"><h3>You still decide</h3><p><span data-keys-for="float"></span> tiles a floating window or floats a tiled one, whatever its rule says. Float wins over the other rules.</p></div>
+          </li>
+          <li class="info-row">
+            <span class="tile-ic"><i data-ic="tabs"></i></span>
+            <div class="info-text"><h3>Tabs together</h3><p>An app's first window gets a tile the normal way; the next ones join it as tabs. Combine with a monitor rule to keep that group on one screen.</p></div>
           </li>
         </ul>
       </section>
@@ -429,7 +516,7 @@ dialog::backdrop{background:var(--scrim)}
         </div>
         <div class="set-row">
           <span class="tile-ic"><i data-ic="folder"></i></span>
-          <span class="set-text"><span class="set-title" id="folder-label">Open Tessera folder</span><span class="set-desc" id="folder-desc">Your saved layout (<code>layout.json</code>), ignore list (<code>ignore.txt</code>), shortcuts (<code>keys.json</code>) and layout choice (<code>options.json</code>) live here.</span></span>
+          <span class="set-text"><span class="set-title" id="folder-label">Open Tessera folder</span><span class="set-desc" id="folder-desc">Your saved layout (<code>layout.json</code>), ignore list (<code>ignore.txt</code>), app rules (<code>rules.json</code>), shortcuts (<code>keys.json</code>) and layout choice (<code>options.json</code>) live here.</span></span>
           <button type="button" class="btn" id="open-folder" aria-describedby="folder-desc">Open folder</button>
         </div>
       </div>
@@ -510,7 +597,12 @@ const P = {
   alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
   win:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>',
   layout:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h18M12 10v11"/>',
-  split:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M16 12h2M17 11v2"/>'
+  split:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M16 12h2M17 11v2"/>',
+  rules:'<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  monitor:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  float:'<rect x="2" y="4" width="20" height="16" rx="2"/><rect x="11" y="10" width="8" height="6" rx="1"/>',
+  trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>'
 };
 const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
 const WINLOGO = '<svg class="winlogo" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 1h6.6v6.6H1zM8.4 1H15v6.6H8.4zM1 8.4h6.6V15H1zM8.4 8.4H15V15H8.4z"/></svg>';
@@ -598,14 +690,14 @@ const DEFAULTS = [
   ['tab-prev','Tabs','Previous tab','Show the previous tab of the group.','Win+PageUp'],
   ['inspector','Tools','Window inspector','See every managed window and its program; float, ignore, close or kill it.','Win+Shift+I'],
   ['pause','Tools','Pause / resume','Pause tiling and give Windows its own shortcuts back.','Win+P'],
-  ['retile','Tools','Re-tile everything','Start over from scratch (resets sizes and tab groups, reloads the ignore list).','Win+Y'],
+  ['retile','Tools','Re-tile everything','Start over from scratch (resets sizes and tab groups, reloads the ignore list and applies app rules to open windows).','Win+Y'],
   ['settings','Tools','Settings & help','Open this window.','Win+F1']
 ].map(([id, section, label, description, keys]) => ({ id, section, label, description, keys, defaultKeys: keys }));
 
 /* ---------- API ---------- */
 const token = new URLSearchParams(location.search).get('t');
 let preview = !token;
-let S = { version: '', startup: false, layout: 'grid', actions: [] };
+let S = { version: '', startup: false, layout: 'grid', rules: [], apps: { open: [], installed: [] }, monitors: [], actions: [] };
 const find = id => S.actions.find(a => a.id === id);
 
 async function api(method, path, body) {
@@ -894,6 +986,95 @@ $('#layouts').addEventListener('keydown', e => {
   pickLayout(LAYOUTS[(i + step + LAYOUTS.length) % LAYOUTS.length][0]);
 });
 
+/* ---------- app rules ---------- */
+const sameRule = (a, b) => a.App.toLowerCase() === b.App.toLowerCase() && a.Action === b.Action;
+const monitorLabel = name => (S.monitors.find(m => m.name === name) || {}).label || `Monitor ${String(name).replace(/\D/g, '')} (not connected)`;
+const ruleText = r => r.Action === 'float' ? 'Floats — never tiled' : r.Action === 'tabs' ? 'Joins its other windows as a tab' : `Opens on ${monitorLabel(r.Monitor)}`;
+const appOf = name => S.apps.open.concat(S.apps.installed).find(a => a.name.toLowerCase() === name.toLowerCase());
+const appIcon = (a, cls) => a && a.icon ? `<img class="${cls}" src="${esc(a.icon)}" alt="">` : '';
+function renderRules() {
+  $('#rules').innerHTML = S.rules.map((r, i) => {
+    const a = appOf(r.App), title = a ? a.title : r.App;
+    return `<li class="set-row">
+    <span class="tile-ic">${ic(r.Action === 'float' ? 'float' : r.Action === 'tabs' ? 'tabs' : 'monitor')}</span>
+    <span class="set-text"><span class="set-title">${appIcon(a, 'rule-app-ic')}${esc(title)}</span><span class="set-desc">${esc(ruleText(r))}${title !== r.App ? ` · ${esc(r.App)}` : ''}</span></span>
+    <button type="button" class="icon-btn" data-del="${i}" title="Remove rule" aria-label="Remove rule: ${esc(title)}, ${esc(ruleText(r))}">${ic('trash')}</button>
+  </li>`; }).join('');
+  $('#rules-empty').hidden = S.rules.length > 0;
+  $('#rule-monitor').innerHTML = S.monitors.map(m => `<option value="${esc(m.name)}">${esc(m.label)}</option>`).join('');
+  renderApps();
+}
+function renderApps(pick = pickedApp()) {
+  const chip = (value, icon, title, sub) => `<label class="app-chip" title="${esc(title)} (${esc(sub)})">
+    <input type="radio" name="rule-app" value="${esc(value)}">${icon}<span class="app-t"><b>${esc(title)}</b><small>${esc(sub)}</small></span></label>`;
+  const app = a => chip(a.name, appIcon(a, '') || `<span class="app-noic">${ic('win')}</span>`, a.title, a.name);
+  const terms = $('#app-search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = a => terms.every(t => (a.title + ' ' + a.name).toLowerCase().includes(t)) || a.name === pick;
+  const isOpen = new Set(S.apps.open.map(a => a.name.toLowerCase()));
+  const open = S.apps.open.filter(hit), installed = S.apps.installed.filter(a => !isOpen.has(a.name.toLowerCase()) && hit(a));
+  $('#rule-apps').innerHTML =
+    (open.length ? '<p class="apps-h">Open now</p>' + open.map(app).join('') : '')
+    + (installed.length ? '<p class="apps-h">Installed apps</p>' + installed.map(app).join('') : '')
+    + (S.apps.loading ? '<p class="apps-msg">Looking for your apps…</p>' : !open.length && !installed.length && terms.length ? '<p class="apps-msg">No app matches. Try another name, or type it below.</p>' : '')
+    + (open.length || installed.length ? '<p class="apps-h">Not listed?</p>' : '')
+    + chip('*', `<span class="app-noic">${ic('plus')}</span>`, 'Another app…', 'Type its program name');
+  const r = $$('#rule-apps input').find(x => x.value === pick);
+  if (r) r.checked = true;
+  $('#rule-app').hidden = pick !== '*';
+}
+async function loadApps() {
+  if (preview) return;
+  S.apps.loading = true; renderApps();
+  try { const d = await api('GET', '/api/apps'); S.apps = { open: d.open || [], installed: d.installed || [] }; }
+  catch (err) { S.apps.loading = false; toast(err.message, true); }
+  renderRules();
+}
+$('#app-search').addEventListener('input', () => renderApps());
+const pickedApp = () => ($('#rule-apps input:checked') || {}).value || '';
+function pickApp(name) {
+  const known = name && appOf(name);
+  renderApps(name ? (known ? known.name : '*') : '');
+  if (name && !known) $('#rule-app').value = name;
+}
+$('#rule-apps').addEventListener('change', () => {
+  const other = pickedApp() === '*';
+  $('#rule-app').hidden = !other;
+  if (other) $('#rule-app').focus();
+});
+$('#rule-refresh').addEventListener('click', async () => {
+  if (preview) return toast('Preview — the list comes from the real Tessera window', true);
+  await loadApps();
+});
+async function saveRules(next, msg) {
+  const d = preview ? { rules: next } : await api('POST', '/api/rules', next);
+  S.rules = d.rules || [];
+  renderRules();
+  toast(preview ? 'Saved in preview — Tessera wasn’t changed' : msg);
+}
+const ruleAction = $('#rule-action');
+ruleAction.addEventListener('change', () => { $('#rule-monitor-wrap').hidden = ruleAction.value !== 'monitor'; });
+$('#rule-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pick = pickedApp();
+  if (!pick) { toast('Pick an app first', true); return $('#rule-apps input')?.focus(); }
+  const app = (pick === '*' ? $('#rule-app').value : pick).trim().replace(/\.exe$/i, '');
+  if (!app) { toast('Type the program name', true); return $('#rule-app').focus(); }
+  const title = (appOf(app) || {}).title || app;
+  const rule = { App: app, Action: ruleAction.value, Monitor: ruleAction.value === 'monitor' ? $('#rule-monitor').value : null };
+  if (rule.Action === 'monitor' && !rule.Monitor) return toast('No monitor to pick', true);
+  try {
+    await saveRules(S.rules.filter(r => !sameRule(r, rule)).concat(rule), `Rule added — new ${title} windows follow it`);
+    $('#rule-app').value = '';
+    pickApp('');
+  } catch (err) { toast(err.message, true); }
+});
+$('#rules').addEventListener('click', async e => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  const gone = S.rules[+b.dataset.del];
+  try { await saveRules(S.rules.filter(r => r !== gone), `Rule for ${(appOf(gone.App) || {}).title || gone.App} removed`); $('#rule-action').focus(); }
+  catch (err) { toast(err.message, true); }
+});
+
 /* ---------- general ---------- */
 const sw = $('#startup');
 function setSwitch(on) { sw.setAttribute('aria-checked', String(on)); $('.sw-state', sw).textContent = on ? 'On' : 'Off'; }
@@ -921,16 +1102,32 @@ $('#open-folder').addEventListener('click', async () => {
       const d = await api('GET', '/api/state');
       if (!Array.isArray(d.actions)) throw new Error('bad state');
       S = { version: d.version || '', startup: !!d.startup, layout: d.layout || 'grid',
+            rules: d.rules || [], apps: { open: [], installed: [] }, monitors: d.monitors || [],
             actions: d.actions.map(a => ({ ...a, keys: norm(a.keys), defaultKeys: norm(a.defaultKeys) })) };
     } catch {
       preview = true;
       $('#banner-text').textContent = 'Couldn’t reach Tessera — preview, changes aren’t saved';
     }
   }
-  if (preview) S = { version: '', startup: true, layout: 'grid', actions: DEFAULTS.map(a => ({ ...a })) };
+  if (preview) S = { version: '', startup: true, layout: 'grid', actions: DEFAULTS.map(a => ({ ...a })),
+    rules: [{ App: 'spotify', Action: 'float' }, { App: 'explorer', Action: 'tabs' }, { App: 'discord', Action: 'monitor', Monitor: '\\\\.\\DISPLAY2' }],
+    apps: { open: [['Code', 'Visual Studio Code'], ['explorer', 'Windows Explorer'], ['msedge', 'Microsoft Edge'], ['Spotify', 'Spotify']]
+        .map(([name, title]) => ({ name, title, icon: null })),
+      installed: [['CalculatorApp', 'Calculator'], ['Discord', 'Discord'], ['firefox', 'Firefox Developer Edition'], ['GitHubDesktop', 'GitHub Desktop'], ['Notepad++', 'Notepad++']]
+        .map(([name, title]) => ({ name, title, icon: null })) },
+    monitors: [{ name: '\\\\.\\DISPLAY1', label: 'Monitor 1 · 2560 × 1440 · main' }, { name: '\\\\.\\DISPLAY2', label: 'Monitor 2 · 1920 × 1080' }] };
   $('#banner').hidden = !preview;
   setSwitch(S.startup);
   renderLayouts();
+  renderRules();
+  const qs = new URLSearchParams(location.search);
+  const linked = qs.get('page') === 'rules' ? qs.get('app') || '' : null;
+  if (linked !== null) {
+    showPage('rules');
+    pickApp(linked);
+    $('#rule-action').focus();
+  }
+  loadApps().then(() => { if (linked) pickApp(linked); });
   const v = S.version ? `Version ${S.version}` : '';
   $('#side-version').textContent = v;
   $('#about-version').textContent = v ? `${v} · A tiling window manager for Windows 11` : 'A tiling window manager for Windows 11';

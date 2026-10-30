@@ -404,6 +404,11 @@ namespace Tessera
             Check(KeyBindings.Apply(acts, new Dictionary<string, string> { { "y", "Win+X" } }) != null && acts[1].Keys == "Win+Y", "duplicate rejected, nothing changed");
             Check(KeyBindings.Apply(acts, new Dictionary<string, string> { { "x", "" }, { "y", "Win+X" } }) == null && acts[0].Keys == "" && acts[1].Keys == "Win+X", "move a binding");
 
+            // app rules
+            var rs = Rules.Clean(new[] { new Rule { App = " Spotify.exe ", Action = "float" }, new Rule { App = "spotify", Action = "float" },
+                new Rule { App = "x", Action = "nope" }, new Rule { App = "d", Action = "monitor" }, new Rule { App = "d", Action = "monitor", Monitor = "M2" }, null });
+            Check(rs.Count == 2 && rs[0].App == "Spotify" && rs[1].Monitor == "M2", "rules cleaned: .exe dropped, repeats, bad actions and monitorless rules skipped");
+
             Console.WriteLine("selftest ok");
             return 0;
         }

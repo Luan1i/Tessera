@@ -89,7 +89,7 @@ namespace Tessera
             for (int i = 0; i < EventRanges.Length; i += 2)
                 hooks.Add(Native.SetWinEventHook(EventRanges[i], EventRanges[i + 1], IntPtr.Zero, onEvent, 0, 0, 2 /* out of context, skip own process */));
 
-            inspector = new Inspector(wm);
+            inspector = new Inspector(wm, app => settings.OpenRules(app));
             settings = new SettingsServer(actions, Rebind, wm);
             DefineActions();
             KeyBindings.Load(actions);
@@ -123,6 +123,7 @@ namespace Tessera
                 tray.ShowBalloonTip(8000, "Tessera", "Keyboard shortcuts could not be enabled.", ToolTipIcon.Warning);
 
             Ignore.Load();
+            Rules.Load();
             wm.StartRestore();
             wm.Sync();
         }
@@ -181,7 +182,7 @@ namespace Tessera
             Add("Tabs", "tab-prev", "Previous tab", "Show the previous tab of the group.", "Win+PageUp", () => wm.NextTab(-1));
             Add("Tools", "inspector", "Window inspector", "See every managed window and its program; float, ignore, close or kill it.", "Win+Shift+I", inspector.Toggle, true);
             Add("Tools", "pause", "Pause / resume", "Pause tiling and give Windows its own shortcuts back.", "Win+P", TogglePause, true);
-            Add("Tools", "retile", "Re-tile everything", "Start over from scratch (resets sizes and tab groups, reloads the ignore list).", "Win+Y", wm.Reload);
+            Add("Tools", "retile", "Re-tile everything", "Start over from scratch (resets sizes and tab groups, reloads the ignore list and applies app rules to open windows).", "Win+Y", wm.Reload);
             Add("Tools", "settings", "Settings & help", "Open this window.", "Win+F1", settings.Open, true);
         }
 

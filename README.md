@@ -33,6 +33,9 @@ GitHub Actions (`.github/workflows/release.yml`) then builds it and publishes th
 - **Auto-tiling** per monitor, with gaps. Pick a **layout** in Settings & help, the tray menu or with Win+Alt+N:
   Grid, Columns, Rows, Main + stack (50/25/25), Stack + main (25/25/50), Spiral, Tabs or Manual. Space is shared out
   evenly whenever a window opens or closes, so ten windows still look tidy (stored in `bin\options.json`).
+- **App rules** (Settings & help → App rules, stored in `bin\rules.json`): pick what happens when an app opens a window —
+  float it, put it on a certain monitor, or add it as a tab to that app's other windows. Pick the app from the ones
+  open now or from your Start menu; the Window inspector's *Make a rule…* button picks it for you.
 - **Keyboard control** for focus, swapping, resizing, moving between monitors, floating and tab groups.
   Every shortcut can be changed in Settings & help (stored in `bin\keys.json`).
 - **Drag a title bar**: drop zones appear on the other tiles — *Swap* in the middle, *Tab* near the top, or an edge to
@@ -79,6 +82,7 @@ while Tessera runs; change them in Settings & help if you'd rather keep those.
 | `src/Drag.cs`, `src/Tabs.cs` | Drag-and-drop zones, tab strips |
 | `src/Keys.cs` | Key binding parsing and `keys.json` |
 | `src/Settings.cs`, `src/settings.html` | Settings & help page (served on 127.0.0.1, shown in an Edge app window), start-with-Windows |
+| `src/Rules.cs` | App rules (`rules.json`) |
 | `src/Inspector.cs`, `src/Layout.cs`, `src/Native.cs` | Inspector, layout save/restore, Win32 calls |
 | `src/AssemblyInfo.cs` | Version number |
 | `src/icons/` | App and tray icons (light/dark taskbar), built into the exe |

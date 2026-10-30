@@ -15,7 +15,7 @@ namespace Tessera
         readonly Highlight highlight = new Highlight();
         readonly Timer refreshSoon = new Timer { Interval = 300 }; // actions like Close finish asynchronously
 
-        public Inspector(WM wm)
+        public Inspector(WM wm, Action<string> makeRule)
         {
             this.wm = wm;
             Text = "Tessera - windows";
@@ -29,6 +29,7 @@ namespace Tessera
             list.SelectedIndexChanged += delegate { ShowHighlight(); };
 
             AddButton("Float / Tile", (h, item) => wm.ToggleFloat(h));
+            AddButton("Make a rule…", (h, item) => { var app = Native.AppName(h); if (app.Length > 0) makeRule(app); });
             AddButton("Ignore this app always", (h, item) =>
             {
                 if (item.SubItems[1].Text.Length == 0) return;
