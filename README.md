@@ -1,4 +1,9 @@
-# Tessera
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/logo/tessera-horizontal-reversed.svg">
+    <img src="brand/logo/tessera-horizontal.svg" alt="Tessera" height="56">
+  </picture>
+</h1>
 
 A small tiling window manager for Windows 11. Open an app and it gets a tile; close it and the others grow to fill
 the space. Invisible and hidden "ghost" windows are skipped, so you never get an empty tile.
@@ -56,3 +61,5 @@ while Tessera runs; change them in Settings & help if you'd rather keep those.
 | `src/Keys.cs` | Key binding parsing and `keys.json` |
 | `src/Settings.cs`, `src/settings.html` | Settings & help page (served on 127.0.0.1, shown in an Edge app window), start-with-Windows |
 | `src/Inspector.cs`, `src/Layout.cs`, `src/Native.cs` | Inspector, layout save/restore, Win32 calls |
+| `src/icons/` | App and tray icons (light/dark taskbar), built into the exe |
+| `brand/` | Logo files, usage guide (`brand/GUIDELINES.md`) and `build_logo.py`, which generates all of them |

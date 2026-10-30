@@ -6,5 +6,5 @@ set REFS=/r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Core.dll /r
 if not exist bin mkdir bin
 "%CSC%" /nologo /nowarn:649 /define:SELFTEST /target:exe /out:bin\selftest.exe %REFS% src\Tree.cs src\Layout.cs src\Keys.cs || exit /b 1
 bin\selftest.exe || exit /b 1
-"%CSC%" /nologo /target:winexe /platform:x64 /optimize /out:bin\Tessera.exe %REFS% /resource:src\settings.html,settings.html src\*.cs || exit /b 1
+"%CSC%" /nologo /target:winexe /platform:x64 /optimize /out:bin\Tessera.exe %REFS% /win32icon:src\icons\app.ico /resource:src\settings.html,settings.html /resource:src\icons\tray-light.ico,tray-light.ico /resource:src\icons\tray-dark.ico,tray-dark.ico src\*.cs || exit /b 1
 echo Built bin\Tessera.exe

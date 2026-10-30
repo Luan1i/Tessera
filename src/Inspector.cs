@@ -19,6 +19,7 @@ namespace Tessera
         {
             this.wm = wm;
             Text = "Tessera - windows";
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             Font = new Font("Segoe UI", 10f);
             TopMost = true;
             KeyPreview = true;

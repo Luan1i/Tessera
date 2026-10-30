@@ -1,0 +1,41 @@
+{
+  "brand": "Tessera",
+  "tagline": "A tiling window manager for Windows 11",
+  "brief": "A small, free tiling window manager for Windows 11 that keeps every window in a clean grid, never tiles ghost windows, and lets you rearrange tiles by dragging. The mark sits in the tray all day, so it has to be calm, exact and readable at 16 px on light and dark taskbars.",
+  "adjectives": ["orderly", "precise", "calm", "native"],
+  "criteria": "Readable at 16 px in the tray on light and dark taskbars, clearly not the Windows logo, works in one colour, says 'tiles' and 'Tessera' at once.",
+  "industry": "software",
+  "nav": ["Features", "Shortcuts", "Download"],
+  "brand_color": "#0078D4",
+  "tile_color": "#1B1F24",
+  "greyscale": false,
+  "final": true,
+  "designer": "Tessera",
+  "concepts": [
+    {
+      "name": "The gap is the T",
+      "symbol": "../logo/tessera-symbol.svg",
+      "lockup": "../logo/tessera-horizontal.svg",
+      "stacked": "../logo/tessera-stacked.svg",
+      "avatar": "../logo/tessera-app-icon.svg",
+      "symbol_on_tile": "../logo/tessera-symbol-reversed.svg",
+      "stacked_on_tile": "../logo/tessera-stacked-reversed.svg",
+      "symbol_on_dark": "../logo/tessera-symbol-reversed.svg",
+      "lockup_on_dark": "../logo/tessera-horizontal-reversed.svg",
+      "stacked_on_dark": "../logo/tessera-stacked-reversed.svg",
+      "idea": "Three window panes whose gutters spell the T of Tessera.",
+      "rationale": [
+        "Shows exactly what the app does: a screen split into tiles",
+        "The name lives in the gaps, the very space Tessera puts between your windows",
+        "One blue pane marks the focused window, like the app's blue focus border",
+        "Pixel-snapped cuts for 16-64 px; light and dark tray versions follow the Windows theme"
+      ]
+    }
+  ],
+  "recommendation": "Final artwork: symbol, wordmark, horizontal and stacked lockups, reversed versions, app icon and tray icons.",
+  "next_steps": [
+    "Use the files in brand/logo and brand/icons",
+    "Follow brand/GUIDELINES.md for spacing, sizes and colours",
+    "Re-run brand/build_logo.py after any change to the geometry"
+  ]
+}

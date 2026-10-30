@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Reflection;
 using System.Threading;
+using Microsoft.Win32;
 using System.Windows.Forms;
 
 namespace Tessera
@@ -67,6 +69,7 @@ namespace Tessera
         Dictionary<int, KeyAction> bound = new Dictionary<int, KeyAction>(); // KeyBindings.Parse code -> action
         readonly List<KeyValuePair<ToolStripMenuItem, string>> menuKeys = new List<KeyValuePair<ToolStripMenuItem, string>>(); // item -> action id
         readonly NotifyIcon tray;
+        bool trayLight;
         readonly ToolStripMenuItem pauseItem;
         readonly Inspector inspector;
         readonly SettingsServer settings;
@@ -92,7 +95,7 @@ namespace Tessera
             KeyBindings.Load(actions);
             onKey = OnKey;
             keyHook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, onKey, Native.GetModuleHandle(null), 0);
-            msgs.ScreenChanged = () => { if (!throttle.Enabled) throttle.Start(); };
+            msgs.ScreenChanged = () => { UpdateTrayIcon(); if (!throttle.Enabled) throttle.Start(); };
             msgs.SessionEnding = wm.SessionEnding;
             saveTimer.Tick += delegate { wm.SaveLayout(); };
             saveTimer.Start();
@@ -103,7 +106,9 @@ namespace Tessera
             menu.Items.Add(pauseItem = MenuItem("Pause tiling", "pause", TogglePause));
             menu.Items.Add(MenuItem("Re-tile all", "retile", wm.Reload));
             menu.Items.Add("Exit", null, delegate { ExitThread(); });
-            tray = new NotifyIcon { Icon = SystemIcons.Application, Text = "Tessera", Visible = true, ContextMenuStrip = menu };
+            tray = new NotifyIcon { Text = "Tessera", ContextMenuStrip = menu };
+            UpdateTrayIcon();
+            tray.Visible = true;
             tray.DoubleClick += delegate { settings.Open(); };
             Rebind();
             if (keyHook == IntPtr.Zero)
@@ -112,6 +117,18 @@ namespace Tessera
             Ignore.Load();
             wm.StartRestore();
             wm.Sync();
+        }
+
+        // Dark logo on a light taskbar, light logo on a dark one; re-checked whenever Windows settings change.
+        void UpdateTrayIcon()
+        {
+            bool light = 1.Equals(Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "SystemUsesLightTheme", 0));
+            if (tray.Icon != null && light == trayLight) return;
+            trayLight = light;
+            Icon old = tray.Icon;
+            using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(light ? "tray-light.ico" : "tray-dark.ico"))
+                tray.Icon = new Icon(s, SystemInformation.SmallIconSize);
+            if (old != null) old.Dispose();
         }
 
         void Add(string section, string id, string label, string description, string keys, Action run, bool whilePaused = false)
