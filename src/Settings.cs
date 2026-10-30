@@ -105,7 +105,7 @@ namespace Tessera
                 if (method == "GET" && route == "/api/state")
                     return json.Serialize(new
                     {
-                        version = "1.0",
+                        version = typeof(Startup).Assembly.GetName().Version.ToString(3),
                         startup = Startup.Enabled(),
                         layout = wm.Mode,
                         actions = actions.Select(a => new { id = a.Id, section = a.Section, label = a.Label, description = a.Description, keys = a.Keys, defaultKeys = a.Default }),

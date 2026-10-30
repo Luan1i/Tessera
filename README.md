@@ -8,10 +8,25 @@
 A small tiling window manager for Windows 11. Open an app and it gets a tile; close it and the others grow to fill
 the space. Invisible and hidden "ghost" windows are skipped, so you never get an empty tile.
 
+## Download
+
+Get `Tessera-<version>.zip` from [Releases](https://github.com/Luan1i/Tessera/releases), unzip it anywhere and run
+`Tessera.exe`. It isn't code-signed, so Windows may say "Windows protected your PC" the first time: click
+**More info → Run anyway**. Settings files are kept next to the exe, so put it in a folder you keep.
+
 ## Build and run
 
 Run `build.cmd`. It uses the C# compiler that ships with Windows (.NET Framework 4.8), so there is nothing to install.
 Then start `bin\Tessera.exe`. It lives in the tray; double-click the tray icon for **Settings & help**.
+
+### Making a release
+
+1. Bump the version in `src/AssemblyInfo.cs` and commit.
+2. Tag that commit `v` + the version (e.g. `v1.0.1`) and push the tag.
+   In GitHub Desktop: History → right-click the commit → Create Tag…, then Push.
+
+GitHub Actions (`.github/workflows/release.yml`) then builds it and publishes the zip on the Releases page.
+`release.cmd` makes the same zip locally in `dist\`.
 
 ## What it does
 
@@ -65,5 +80,6 @@ while Tessera runs; change them in Settings & help if you'd rather keep those.
 | `src/Keys.cs` | Key binding parsing and `keys.json` |
 | `src/Settings.cs`, `src/settings.html` | Settings & help page (served on 127.0.0.1, shown in an Edge app window), start-with-Windows |
 | `src/Inspector.cs`, `src/Layout.cs`, `src/Native.cs` | Inspector, layout save/restore, Win32 calls |
+| `src/AssemblyInfo.cs` | Version number |
 | `src/icons/` | App and tray icons (light/dark taskbar), built into the exe |
 | `brand/` | Logo files, usage guide (`brand/GUIDELINES.md`) and `build_logo.py`, which generates all of them |

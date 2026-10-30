@@ -1,0 +1,24 @@
+# Push a tag like v1.0.0 and this builds Tessera and publishes it as a GitHub release.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and zip
+        shell: cmd
+        run: .\release.cmd
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $v = [Reflection.AssemblyName]::GetAssemblyName("$PWD\bin\Tessera.exe").Version.ToString(3)
+          if ($env:TAG -ne "v$v") { throw "Tag $env:TAG does not match version $v in src\AssemblyInfo.cs" }
+          gh release create $env:TAG "dist\Tessera-$v.zip" --title "Tessera $v" --generate-notes
