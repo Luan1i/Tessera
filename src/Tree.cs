@@ -200,6 +200,16 @@ namespace Tessera
             return best;
         }
 
+        // How far to move window w so it stays inside area (an app's minimum size can make it bigger than its tile).
+        // Too big for the area: it lines up with the area's left / top edge.
+        public static Point Inside(Rectangle w, Rectangle area)
+        {
+            int dx = w.Right > area.Right ? area.Right - w.Right : 0, dy = w.Bottom > area.Bottom ? area.Bottom - w.Bottom : 0;
+            if (w.Left + dx < area.Left) dx = area.Left - w.Left;
+            if (w.Top + dy < area.Top) dy = area.Top - w.Top;
+            return new Point(dx, dy);
+        }
+
         // Roughly where the dropped window lands inside tile r, for the preview.
         public static Rectangle ZoneRect(Rectangle r, int zone)
         {
@@ -403,6 +413,12 @@ namespace Tessera
             var acts = new List<KeyAction> { new KeyAction { Id = "x", Label = "X", Keys = "Win+X" }, new KeyAction { Id = "y", Label = "Y", Keys = "Win+Y" } };
             Check(KeyBindings.Apply(acts, new Dictionary<string, string> { { "y", "Win+X" } }) != null && acts[1].Keys == "Win+Y", "duplicate rejected, nothing changed");
             Check(KeyBindings.Apply(acts, new Dictionary<string, string> { { "x", "" }, { "y", "Win+X" } }) == null && acts[0].Keys == "" && acts[1].Keys == "Win+X", "move a binding");
+
+            // a 750 px wide Brave in the last 480 px column of a 1920 px screen moves left instead of onto the next monitor
+            var screen = new Rectangle(0, 0, 1920, 1080);
+            Check(Tree.Inside(new Rectangle(1445, 0, 750, 1080), screen) == new Point(-275, 0), "kept on its monitor");
+            Check(Tree.Inside(new Rectangle(10, 10, 100, 100), screen) == Point.Empty, "fits: not moved");
+            Check(Tree.Inside(new Rectangle(500, -20, 2400, 100), screen) == new Point(-500, 20), "too wide: left edge wins");
 
             // app rules
             var rs = Rules.Clean(new[] { new Rule { App = " Spotify.exe ", Action = "float" }, new Rule { App = "spotify", Action = "float" },

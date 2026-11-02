@@ -269,15 +269,21 @@ namespace Tessera
         {
             var next = new Dictionary<IntPtr, Rectangle>();
             var groups = new List<KeyValuePair<Node, Rectangle>>();
-            foreach (var d in Native.Displays())
+            var displays = Native.Displays();
+            foreach (var d in displays)
             {
                 Node root;
                 if (roots.TryGetValue(d.Name, out root))
                     Tree.Layout(root, Rectangle.Inflate(d.Work, -Gap / 2, -Gap / 2), Gap, next, 30 * d.Dpi / 96, groups);
             }
             layout = next;
+            foreach (var h in placed.Keys.Where(h => !layout.ContainsKey(h)).ToList()) placed.Remove(h);
             foreach (var kv in layout)
-                if (kv.Key != Dragging) Place(kv.Key, kv.Value);
+            {
+                var center = new Point(kv.Value.X + kv.Value.Width / 2, kv.Value.Y + kv.Value.Height / 2);
+                var d = displays.FirstOrDefault(x => x.Work.Contains(center));
+                if (kv.Key != Dragging) Place(kv.Key, kv.Value, d != null ? d.Work : kv.Value);
+            }
             // tabs share one spot: tuck the inactive ones right under the active one (never raises anything)
             foreach (var g in groups)
             {
@@ -463,17 +469,30 @@ namespace Tessera
             Apply();
         }
 
-        static void Place(IntPtr h, Rectangle r)
+        readonly Dictionary<IntPtr, Rectangle[]> placed = new Dictionary<IntPtr, Rectangle[]>(); // tile, and where the window really ended up
+
+        // Puts window h in tile r. An app whose minimum size is bigger than its tile would spill over the
+        // screen edge onto the next monitor; it's moved back so it overlaps its neighbour instead.
+        void Place(IntPtr h, Rectangle tile, Rectangle work)
         {
             if (Native.IsZoomed(h)) return; // maximized on purpose: leave it; restoring puts it back in its tile
             Native.RECT wr, fr;
             if (!Native.GetWindowRect(h, out wr)) return;
+            Rectangle[] last;
+            if (placed.TryGetValue(h, out last) && last[0] == tile && last[1] == Rect(wr)) return; // already done; don't move it twice each time
+            var r = tile;
             // Windows 10/11 add an invisible resize border; grow the target so the visible frame fills the tile
             if (Native.DwmGetWindowAttribute(h, Native.DWMWA_EXTENDED_FRAME_BOUNDS, out fr, Marshal.SizeOf(typeof(Native.RECT))) == 0)
                 r = Rectangle.FromLTRB(r.Left - (fr.Left - wr.Left), r.Top - (fr.Top - wr.Top), r.Right + (wr.Right - fr.Right), r.Bottom + (wr.Bottom - fr.Bottom));
-            if (wr.Left == r.Left && wr.Top == r.Top && wr.Right == r.Right && wr.Bottom == r.Bottom) return;
-            Native.SetWindowPos(h, IntPtr.Zero, r.X, r.Y, r.Width, r.Height, Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER);
+            const uint flags = Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER;
+            if (Rect(wr) != r) Native.SetWindowPos(h, IntPtr.Zero, r.X, r.Y, r.Width, r.Height, flags);
+            var shift = Tree.Inside(Native.VisibleRect(h), work);
+            if (shift != Point.Empty && Native.GetWindowRect(h, out wr))
+                Native.SetWindowPos(h, IntPtr.Zero, wr.Left + shift.X, wr.Top + shift.Y, 0, 0, flags | Native.SWP_NOSIZE);
+            if (Native.GetWindowRect(h, out wr)) placed[h] = new[] { tile, Rect(wr) };
         }
+
+        static Rectangle Rect(Native.RECT r) { return Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom); }
 
         IntPtr Focused()
         {
