@@ -265,7 +265,8 @@ namespace Tessera
             SetLayout(Tree.Layouts[(Array.IndexOf(Tree.Layouts, Mode) + 1) % Tree.Layouts.Length]);
         }
 
-        void Apply()
+        // again: second pass in one go, after placing the windows taught us new minimum sizes
+        void Apply(bool again = false)
         {
             var next = new Dictionary<IntPtr, Rectangle>();
             var groups = new List<KeyValuePair<Node, Rectangle>>();
@@ -273,17 +274,24 @@ namespace Tessera
             foreach (var d in displays)
             {
                 Node root;
-                if (roots.TryGetValue(d.Name, out root))
-                    Tree.Layout(root, Rectangle.Inflate(d.Work, -Gap / 2, -Gap / 2), Gap, next, 30 * d.Dpi / 96, groups);
+                if (!roots.TryGetValue(d.Name, out root)) continue;
+                var area = Rectangle.Inflate(d.Work, -Gap / 2, -Gap / 2);
+                int tabHeight = 30 * d.Dpi / 96;
+                if (Tree.TabWhatDoesntFit(root, area.Size, Gap, tabHeight, MinOf) && Auto(d.Name))
+                    roots[d.Name] = root = Tree.Arrange(root, Mode, false);
+                Tree.Layout(root, area, Gap, next, tabHeight, groups, MinOf);
             }
             layout = next;
             foreach (var h in placed.Keys.Where(h => !layout.ContainsKey(h)).ToList()) placed.Remove(h);
+            foreach (var h in minSize.Keys.Where(h => !Native.IsWindow(h)).ToList()) minSize.Remove(h);
+            learned = false;
             foreach (var kv in layout)
             {
                 var center = new Point(kv.Value.X + kv.Value.Width / 2, kv.Value.Y + kv.Value.Height / 2);
                 var d = displays.FirstOrDefault(x => x.Work.Contains(center));
                 if (kv.Key != Dragging) Place(kv.Key, kv.Value, d != null ? d.Work : kv.Value);
             }
+            if (learned && !again) { Apply(true); return; }
             // tabs share one spot: tuck the inactive ones right under the active one (never raises anything)
             foreach (var g in groups)
             {
@@ -470,6 +478,10 @@ namespace Tessera
         }
 
         readonly Dictionary<IntPtr, Rectangle[]> placed = new Dictionary<IntPtr, Rectangle[]>(); // tile, and where the window really ended up
+        readonly Dictionary<IntPtr, Size> minSize = new Dictionary<IntPtr, Size>(); // smallest a window would go (0 = no limit seen)
+        bool learned; // Place found a new minimum size
+
+        Size MinOf(IntPtr h) { Size s; return minSize.TryGetValue(h, out s) ? s : Size.Empty; }
 
         // Puts window h in tile r. An app whose minimum size is bigger than its tile would spill over the
         // screen edge onto the next monitor; it's moved back so it overlaps its neighbour instead.
@@ -486,7 +498,14 @@ namespace Tessera
                 r = Rectangle.FromLTRB(r.Left - (fr.Left - wr.Left), r.Top - (fr.Top - wr.Top), r.Right + (wr.Right - fr.Right), r.Bottom + (wr.Bottom - fr.Bottom));
             const uint flags = Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER;
             if (Rect(wr) != r) Native.SetWindowPos(h, IntPtr.Zero, r.X, r.Y, r.Width, r.Height, flags);
-            var shift = Tree.Inside(Native.VisibleRect(h), work);
+            var v = Native.VisibleRect(h);
+            // bigger than its tile: that's as small as the app goes; fits a tile smaller than what we knew: forget it
+            Size m, now;
+            minSize.TryGetValue(h, out m);
+            now = new Size(v.Width > tile.Width + 1 ? v.Width : m.Width > tile.Width ? 0 : m.Width,
+                           v.Height > tile.Height + 1 ? v.Height : m.Height > tile.Height ? 0 : m.Height);
+            if (now != m) { minSize[h] = now; learned = true; }
+            var shift = Tree.Inside(v, work);
             if (shift != Point.Empty && Native.GetWindowRect(h, out wr))
                 Native.SetWindowPos(h, IntPtr.Zero, wr.Left + shift.X, wr.Top + shift.Y, 0, 0, flags | Native.SWP_NOSIZE);
             if (Native.GetWindowRect(h, out wr)) placed[h] = new[] { tile, Rect(wr) };

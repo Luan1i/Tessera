@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 namespace Tessera
 {
@@ -225,7 +226,9 @@ namespace Tessera
         }
 
         // bars (optional) receives each tab group and where its tab strip goes.
-        public static void Layout(Node n, Rectangle r, int gap, Dictionary<IntPtr, Rectangle> result, int tabHeight = 0, List<KeyValuePair<Node, Rectangle>> bars = null)
+        // min (optional) gives a window's smallest size (Size.Empty or 0 = unknown); tiles get at least that when there's room.
+        public static void Layout(Node n, Rectangle r, int gap, Dictionary<IntPtr, Rectangle> result, int tabHeight = 0,
+            List<KeyValuePair<Node, Rectangle>> bars = null, Func<IntPtr, Size> min = null)
         {
             if (n.IsLeaf) { result[n.Hwnd] = Rectangle.Inflate(r, -gap / 2, -gap / 2); return; }
             if (n.Stacked)
@@ -233,18 +236,78 @@ namespace Tessera
                 if (bars != null && n.Children.Count > 0)
                     bars.Add(new KeyValuePair<Node, Rectangle>(n, Rectangle.FromLTRB(r.Left + gap / 2, r.Top + gap / 2, r.Right - gap / 2, r.Top + gap / 2 + tabHeight)));
                 var below = Rectangle.FromLTRB(r.Left, r.Top + tabHeight, r.Right, r.Bottom);
-                foreach (var c in n.Children) Layout(c, below, gap, result, tabHeight, bars);
+                foreach (var c in n.Children) Layout(c, below, gap, result, tabHeight, bars, min);
                 return;
             }
-            double total = 0, acc = 0;
-            foreach (var c in n.Children) total += c.Weight;
+            var sizes = Shares(n.Children.Select(c => c.Weight).ToArray(),
+                n.Children.Select(c => min == null ? 0 : n.Vertical ? MinSize(c, gap, tabHeight, min).Height : MinSize(c, gap, tabHeight, min).Width).ToArray(),
+                n.Vertical ? r.Height : r.Width);
+            double acc = 0;
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                int a = (int)Math.Round(acc), b = (int)Math.Round(acc += sizes[i]);
+                var part = n.Vertical ? Rectangle.FromLTRB(r.Left, r.Top + a, r.Right, r.Top + b) : Rectangle.FromLTRB(r.Left + a, r.Top, r.Left + b, r.Bottom);
+                Layout(n.Children[i], part, gap, result, tabHeight, bars, min);
+            }
+        }
+
+        // Splits length by weight, but nobody gets less than their minimum (when all the minimums fit).
+        public static double[] Shares(double[] weight, int[] min, int length)
+        {
+            int n = weight.Length;
+            var size = new double[n];
+            var held = new bool[n]; // given exactly its minimum
+            Func<double> left = () => length - Enumerable.Range(0, n).Where(i => held[i]).Sum(i => (double)min[i]);
+            Func<double> rest = () => Enumerable.Range(0, n).Where(i => !held[i]).Sum(i => weight[i]);
+            if (min.Sum() <= length) // otherwise they can't all be honoured: plain weights
+                for (bool again = true; again && rest() > 0; )
+                {
+                    again = false;
+                    double free = left(), w = rest();
+                    for (int i = 0; i < n; i++)
+                        if (!held[i] && free * weight[i] / w < min[i]) { held[i] = true; again = true; }
+                }
+            double l = left(), r = rest(), all = weight.Sum();
+            for (int i = 0; i < n; i++)
+                size[i] = !held[i] ? l * weight[i] / r : r > 0 ? min[i] : min[i] + l * weight[i] / all; // all held: spare room by weight
+            return size;
+        }
+
+        // Smallest room n needs: its windows' minimums plus gaps and tab strips (unknown minimums count as 0).
+        public static Size MinSize(Node n, int gap, int tabHeight, Func<IntPtr, Size> min)
+        {
+            if (n.IsLeaf)
+            {
+                var m = min(n.Hwnd);
+                return new Size(m.Width > 0 ? m.Width + gap : 0, m.Height > 0 ? m.Height + gap : 0);
+            }
+            int w = 0, h = 0;
             foreach (var c in n.Children)
             {
-                double a = acc / total, b = (acc += c.Weight) / total;
-                var part = n.Vertical
-                    ? Rectangle.FromLTRB(r.Left, r.Top + (int)Math.Round(r.Height * a), r.Right, r.Top + (int)Math.Round(r.Height * b))
-                    : Rectangle.FromLTRB(r.Left + (int)Math.Round(r.Width * a), r.Top, r.Left + (int)Math.Round(r.Width * b), r.Bottom);
-                Layout(c, part, gap, result, tabHeight, bars);
+                var s = MinSize(c, gap, tabHeight, min);
+                if (n.Stacked) { w = Math.Max(w, s.Width); h = Math.Max(h, s.Height); }
+                else if (n.Vertical) { w = Math.Max(w, s.Width); h += s.Height; }
+                else { w += s.Width; h = Math.Max(h, s.Height); }
+            }
+            return n.Stacked && h > 0 ? new Size(w, h + tabHeight) : new Size(w, h);
+        }
+
+        // While root's windows can't fit in area even at their smallest, the last window becomes a tab of the one
+        // before it, so windows never have to overlap. Returns true if anything changed.
+        public static bool TabWhatDoesntFit(Node root, Size area, int gap, int tabHeight, Func<IntPtr, Size> min)
+        {
+            for (bool changed = false; ; changed = true)
+            {
+                var need = MinSize(root, gap, tabHeight, min);
+                if (need.Width <= area.Width && need.Height <= area.Height) return changed;
+                var leaves = new List<Node>();
+                Leaves(root, leaves);
+                int i = leaves.Count - 1;
+                while (i > 0 && leaves[i].Parent.Stacked && leaves[i].Parent == leaves[i - 1].Parent) i--; // skip whole tab groups
+                if (i <= 0) return changed; // already one tile: nothing more to do
+                var h = leaves[i].Hwnd;
+                Remove(leaves[i]);
+                AddTab(leaves[i - 1], h);
             }
         }
 
@@ -419,6 +482,27 @@ namespace Tessera
             Check(Tree.Inside(new Rectangle(1445, 0, 750, 1080), screen) == new Point(-275, 0), "kept on its monitor");
             Check(Tree.Inside(new Rectangle(10, 10, 100, 100), screen) == Point.Empty, "fits: not moved");
             Check(Tree.Inside(new Rectangle(500, -20, 2400, 100), screen) == new Point(-500, 20), "too wide: left edge wins");
+
+            // minimum sizes: on 2560 px, Brave needs 700, Kontabo and GitHub Desktop 1024 each (2748 > 2560)
+            IntPtr brave = (IntPtr)20, kontabo = (IntPtr)21, github = (IntPtr)22;
+            var mins = new Dictionary<IntPtr, Size> { { brave, new Size(700, 0) }, { kontabo, new Size(1024, 0) }, { github, new Size(1024, 0) } };
+            Func<IntPtr, Size> minOf = h => mins.ContainsKey(h) ? mins[h] : Size.Empty;
+            var sh = Tree.Shares(new double[] { 1, 1, 1 }, new[] { 0, 1024, 0 }, 2560);
+            Check(sh[1] == 1024 && Math.Abs(sh[0] - 768) < 0.01 && Math.Abs(sh[2] - 768) < 0.01, "a window gets its minimum, the others share the rest");
+            sh = Tree.Shares(new double[] { 1, 1 }, new[] { 100, 100 }, 300);
+            Check(sh[0] == 150 && sh[1] == 150, "minimums that fit change nothing");
+            var row = new Node();
+            foreach (var h in new[] { brave, kontabo }) Tree.Insert(row, h, null);
+            r = new Dictionary<IntPtr, Rectangle>();
+            Tree.Layout(row, new Rectangle(0, 0, 2560, 1400), 0, r, 30, null, minOf);
+            Check(r[kontabo].Width == 1280 && r[brave].Width == 1280, "two fit: even halves");
+            Tree.Insert(row, github, null);
+            Check(Tree.TabWhatDoesntFit(row, new Size(2560, 1400), 0, 30, minOf), "three don't fit side by side");
+            Check(row.Children.Count == 2 && row.Children[1].Stacked && row.Children[1].Children[1].Hwnd == github, "the last one became a tab of the one before");
+            r = new Dictionary<IntPtr, Rectangle>();
+            Tree.Layout(row, new Rectangle(0, 0, 2560, 1400), 0, r, 30, null, minOf);
+            Check(r[brave].Right <= r[kontabo].Left && r[kontabo] == r[github] && r[kontabo].Width >= 1024, "no overlap any more");
+            Check(!Tree.TabWhatDoesntFit(row, new Size(2560, 1400), 0, 30, minOf), "fits now: nothing changes");
 
             // app rules
             var rs = Rules.Clean(new[] { new Rule { App = " Spotify.exe ", Action = "float" }, new Rule { App = "spotify", Action = "float" },

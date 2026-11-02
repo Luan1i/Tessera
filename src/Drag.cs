@@ -109,7 +109,7 @@ namespace Tessera
             Bounds = area;
             BackColor = Color.Magenta;
             TransparencyKey = Color.Magenta; // magenta pixels are see-through
-            Opacity = 0.6;
+            Opacity = 0.85;
             DoubleBuffered = true;
         }
 
@@ -129,23 +129,34 @@ namespace Tessera
         {
             var g = e.Graphics;
             g.TranslateTransform(-Left, -Top);
-            using (var border = new Pen(Accent, 3))
-            using (var thick = new Pen(Accent, 6))
-            using (var dashed = new Pen(Accent, 2) { DashStyle = DashStyle.Dash })
+            float s = DeviceDpi / 96f;
+            using (var border = new Pen(Accent, 5 * s))
+            using (var thick = new Pen(Accent, 6 * s))
+            using (var dashed = new Pen(Accent, 3 * s) { DashStyle = DashStyle.Dash })
             using (var fill = new SolidBrush(Accent))
-            using (var font = new Font("Segoe UI", 18f * DeviceDpi / 96, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var font = new Font("Segoe UI", 18f * s, FontStyle.Bold, GraphicsUnit.Pixel))
             {
+                // where the window would land, drawn first so the labels stay readable on top of it
+                if (drag.HoverZone >= 0 && drag.HoverZone != DragController.MoveZone && Bounds.IntersectsWith(drag.HoverRect))
+                    g.FillRectangle(fill, Rectangle.Inflate(Tree.ZoneRect(drag.HoverRect, drag.HoverZone), -6, -6));
                 foreach (var t in drag.Targets)
                 {
                     if (!Bounds.IntersectsWith(t.Value)) continue;
                     var r = t.Value;
-                    g.DrawRectangle(border, r.X + 2, r.Y + 2, r.Width - 4, r.Height - 4);
+                    int b = (int)(3 * s);
+                    g.DrawRectangle(border, r.X + b, r.Y + b, r.Width - 2 * b, r.Height - 2 * b);
                     var swap = Rectangle.Inflate(r, -r.Width * 3 / 10, -r.Height * 3 / 10);
                     var tab = Tree.ZoneRect(r, 5);
                     g.DrawRectangle(dashed, swap);
                     g.DrawRectangle(dashed, tab);
-                    TextRenderer.DrawText(g, "Swap", font, swap, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-                    TextRenderer.DrawText(g, "Tab", font, tab, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    Label(g, "Swap", font, Center(swap), s);
+                    Label(g, "Tab", font, Center(tab), s);
+                    // the edge zones: the window goes on that side of this tile
+                    int cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
+                    Label(g, "← Left", font, new Point(r.X + r.Width * 15 / 100, cy), s);
+                    Label(g, "Right →", font, new Point(r.X + r.Width * 85 / 100, cy), s);
+                    Label(g, "↑ Above", font, new Point(cx, r.Y + r.Height * 25 / 100), s);
+                    Label(g, "↓ Below", font, new Point(cx, r.Y + r.Height * 85 / 100), s);
                 }
                 // another monitor without tiles: say it can take the window
                 var box = Rectangle.Inflate(Bounds, -Bounds.Width * 3 / 10, -Bounds.Height * 3 / 10);
@@ -159,11 +170,23 @@ namespace Tessera
                 else if (Bounds != drag.StartWork && !drag.Targets.Exists(t => Bounds.IntersectsWith(t.Value)))
                 {
                     g.DrawRectangle(dashed, box);
-                    TextRenderer.DrawText(g, "Move here", font, box, Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    Label(g, "Move here", font, Center(box), s);
                 }
-                else if (drag.HoverZone >= 0 && Bounds.IntersectsWith(drag.HoverRect))
-                    g.FillRectangle(fill, Rectangle.Inflate(Tree.ZoneRect(drag.HoverRect, drag.HoverZone), -6, -6));
             }
+        }
+
+        static Point Center(Rectangle r) { return new Point(r.X + r.Width / 2, r.Y + r.Height / 2); }
+
+        // White text on a solid blue badge with a white rim, so it reads over any window and over the blue drop preview.
+        // No anti-aliasing: soft edges would blend with the magenta transparency key.
+        static void Label(Graphics g, string text, Font font, Point center, float s)
+        {
+            var size = TextRenderer.MeasureText(g, text, font, Size.Empty, TextFormatFlags.NoPadding);
+            int px = (int)(12 * s), py = (int)(6 * s), rim = Math.Max(2, (int)(2 * s));
+            var box = new Rectangle(center.X - size.Width / 2 - px, center.Y - size.Height / 2 - py, size.Width + 2 * px, size.Height + 2 * py);
+            g.FillRectangle(Brushes.White, Rectangle.Inflate(box, rim, rim));
+            using (var fill = new SolidBrush(Accent)) g.FillRectangle(fill, box);
+            TextRenderer.DrawText(g, text, font, box, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
         }
     }
 }
