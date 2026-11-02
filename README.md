@@ -36,6 +36,10 @@ GitHub Actions (`.github/workflows/release.yml`) then builds it and publishes th
 - **App rules** (Settings & help → App rules, stored in `bin\rules.json`): pick what happens when an app opens a window —
   float it, put it on a certain monitor, or add it as a tab to that app's other windows. Pick the app from the ones
   open now or from your Start menu; the Window inspector's *Make a rule…* button picks it for you.
+- **No overlapping**: an app that can't get smaller than its tile gets the room it needs and the others share the rest.
+  If there still isn't room, the last window becomes a tab, and it gets its own tile back once there's space.
+- **Workspaces**: each monitor has 9. Win+1…9 switches the focused monitor; the windows you leave wait minimized
+  (clicking one on the taskbar takes you to its workspace). Floating windows stay on every workspace.
 - **Keyboard control** for focus, swapping, resizing, moving between monitors, floating and tab groups.
   Every shortcut can be changed in Settings & help (stored in `bin\keys.json`).
 - **Drag a title bar**: drop zones appear on the other tiles — *Swap* in the middle, *Tab* near the top, or an edge to
@@ -64,12 +68,15 @@ GitHub Actions (`.github/workflows/release.yml`) then builds it and publishes th
 | Win+F | Float / tile the focused window |
 | Win+S | Make a tab group, or lay one out side by side again |
 | Win+PageDown / PageUp | Next / previous tab |
+| Win+1 … 9 | Show that workspace on the focused monitor |
+| Win+Shift+1 … 9 | Send the focused window to that workspace |
 | Win+Shift+I | Window inspector |
 | Win+P | Pause / resume (gives Windows its own shortcuts back) |
 | Win+Y | Re-tile everything from scratch |
 | Win+F1 | Settings & help |
 
-The defaults replace some Windows shortcuts (Win+Arrow snap, Win+D, Win+V, Win+H, Win+F, Win+S, Win+P, Win+F1)
+The defaults replace some Windows shortcuts (Win+Arrow snap, Win+D, Win+V, Win+H, Win+F, Win+S, Win+P, Win+F1,
+and Win+1…9 / Win+Shift+1…9 for taskbar apps)
 while Tessera runs; change them in Settings & help if you'd rather keep those.
 
 ## How it's built
@@ -83,6 +90,7 @@ while Tessera runs; change them in Settings & help if you'd rather keep those.
 | `src/Keys.cs` | Key binding parsing and `keys.json` |
 | `src/Settings.cs`, `src/settings.html` | Settings & help page (served on 127.0.0.1, shown in an Edge app window), start-with-Windows |
 | `src/Rules.cs` | App rules (`rules.json`) |
+| `src/Toast.cs` | The short "Workspace 2" note when switching |
 | `src/Inspector.cs`, `src/Layout.cs`, `src/Native.cs` | Inspector, layout save/restore, Win32 calls |
 | `src/AssemblyInfo.cs` | Version number |
 | `src/icons/` | App and tray icons (light/dark taskbar), built into the exe |

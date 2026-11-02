@@ -180,6 +180,16 @@ namespace Tessera
             Add("Tabs", "tabs", "Tab group", "Turn the focused window into a tab group, or lay a tab group out side by side again.", "Win+S", wm.ToggleStack);
             Add("Tabs", "tab-next", "Next tab", "Show the next tab of the group.", "Win+PageDown", () => wm.NextTab(1));
             Add("Tabs", "tab-prev", "Previous tab", "Show the previous tab of the group.", "Win+PageUp", () => wm.NextTab(-1));
+            for (int k = 1; k <= 9; k++)
+            {
+                int n = k;
+                Add("Workspaces", "workspace-" + n, "Workspace " + n, "Show workspace " + n + " on the focused monitor; the windows you leave wait minimized.", "Win+" + n, () => wm.SwitchWorkspace(n));
+            }
+            for (int k = 1; k <= 9; k++)
+            {
+                int n = k;
+                Add("Workspaces", "to-workspace-" + n, "Send to workspace " + n, "Move the focused window to workspace " + n + " of its monitor.", "Win+Shift+" + n, () => wm.MoveToWorkspace(n));
+            }
             Add("Tools", "inspector", "Window inspector", "See every managed window and its program; float, ignore, close or kill it.", "Win+Shift+I", inspector.Toggle, true);
             Add("Tools", "pause", "Pause / resume", "Pause tiling and give Windows its own shortcuts back.", "Win+P", TogglePause, true);
             Add("Tools", "retile", "Re-tile everything", "Start over from scratch (resets sizes and tab groups, reloads the ignore list and applies app rules to open windows).", "Win+Y", wm.Reload);
@@ -243,6 +253,7 @@ namespace Tessera
         protected override void ExitThreadCore()
         {
             wm.SaveLayout();
+            wm.ShowAllWorkspaces();
             wm.ClearBorder();
             foreach (var h in hooks) Native.UnhookWinEvent(h);
             Native.UnhookWindowsHookEx(keyHook);

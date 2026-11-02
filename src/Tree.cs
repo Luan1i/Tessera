@@ -292,9 +292,31 @@ namespace Tessera
             return n.Stacked && h > 0 ? new Size(w, h + tabHeight) : new Size(w, h);
         }
 
+        // A copy of the tree (same windows, new nodes), to try a change on without touching the real one.
+        public static Node Clone(Node n)
+        {
+            var c = new Node { Hwnd = n.Hwnd, Vertical = n.Vertical, Stacked = n.Stacked, ActiveTab = n.ActiveTab, Weight = n.Weight };
+            foreach (var k in n.Children) { var kc = Clone(k); kc.Parent = c; c.Children.Add(kc); }
+            return c;
+        }
+
+        // Takes window h out of its tab group and puts it right after the group, as a tile of its own.
+        public static void Untab(Node root, IntPtr h)
+        {
+            var leaf = Find(root, h);
+            if (leaf == null || !leaf.Parent.Stacked) return;
+            var group = leaf.Parent;
+            if (group.Children.Count == 1) { group.Stacked = false; return; }
+            var other = group.Children.First(c => c != leaf);
+            Remove(leaf);
+            var unit = other.Parent.Stacked ? other.Parent : other; // the group, or the window left when it collapsed
+            var p = unit.Parent;
+            p.Children.Insert(p.Children.IndexOf(unit) + 1, new Node { Hwnd = h, Parent = p });
+        }
+
         // While root's windows can't fit in area even at their smallest, the last window becomes a tab of the one
-        // before it, so windows never have to overlap. Returns true if anything changed.
-        public static bool TabWhatDoesntFit(Node root, Size area, int gap, int tabHeight, Func<IntPtr, Size> min)
+        // before it, so windows never have to overlap. Returns true if anything changed; tabbed (optional) gets those windows.
+        public static bool TabWhatDoesntFit(Node root, Size area, int gap, int tabHeight, Func<IntPtr, Size> min, HashSet<IntPtr> tabbed = null)
         {
             for (bool changed = false; ; changed = true)
             {
@@ -308,6 +330,7 @@ namespace Tessera
                 var h = leaves[i].Hwnd;
                 Remove(leaves[i]);
                 AddTab(leaves[i - 1], h);
+                if (tabbed != null) tabbed.Add(h);
             }
         }
 
@@ -497,12 +520,21 @@ namespace Tessera
             Tree.Layout(row, new Rectangle(0, 0, 2560, 1400), 0, r, 30, null, minOf);
             Check(r[kontabo].Width == 1280 && r[brave].Width == 1280, "two fit: even halves");
             Tree.Insert(row, github, null);
-            Check(Tree.TabWhatDoesntFit(row, new Size(2560, 1400), 0, 30, minOf), "three don't fit side by side");
+            var made = new HashSet<IntPtr>();
+            Check(Tree.TabWhatDoesntFit(row, new Size(2560, 1400), 0, 30, minOf, made) && made.SetEquals(new[] { github }), "three don't fit side by side");
             Check(row.Children.Count == 2 && row.Children[1].Stacked && row.Children[1].Children[1].Hwnd == github, "the last one became a tab of the one before");
             r = new Dictionary<IntPtr, Rectangle>();
             Tree.Layout(row, new Rectangle(0, 0, 2560, 1400), 0, r, 30, null, minOf);
             Check(r[brave].Right <= r[kontabo].Left && r[kontabo] == r[github] && r[kontabo].Width >= 1024, "no overlap any more");
             Check(!Tree.TabWhatDoesntFit(row, new Size(2560, 1400), 0, 30, minOf), "fits now: nothing changes");
+            var copy = Tree.Clone(row);
+            Tree.Untab(copy, github);
+            Check(copy.Children.Count == 3 && copy.Children[2].Hwnd == github && row.Children.Count == 2, "untab: its own tile again, original untouched");
+            Check(Tree.TabWhatDoesntFit(copy, new Size(2560, 1400), 0, 30, minOf), "still no room: tabbed again");
+            copy = Tree.Clone(row);
+            Tree.Untab(copy, github);
+            mins[github] = new Size(500, 0); // 700 + 1024 + 500 fits in 2560
+            Check(!Tree.TabWhatDoesntFit(copy, new Size(2560, 1400), 0, 30, minOf), "room again: stays its own tile");
 
             // app rules
             var rs = Rules.Clean(new[] { new Rule { App = " Spotify.exe ", Action = "float" }, new Rule { App = "spotify", Action = "float" },

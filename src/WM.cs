@@ -43,6 +43,7 @@ namespace Tessera
         readonly Dictionary<string, Node> roots = new Dictionary<string, Node>(); // one tree per monitor
         readonly HashSet<IntPtr> floating = new HashSet<IntPtr>();
         readonly HashSet<IntPtr> seen = new HashSet<IntPtr>(); // app rules apply once, when a window first shows up
+        readonly HashSet<IntPtr> autoTabbed = new HashSet<IntPtr>(); // made a tab by Fit because there was no room
         Dictionary<IntPtr, Rectangle> layout = new Dictionary<IntPtr, Rectangle>();
         IntPtr lastFocus;
         public bool Paused;
@@ -101,7 +102,125 @@ namespace Tessera
             var n = FindLeaf(h);
             if (n == null) return;
             lastFocus = h;
+            activeMonitor = MonitorOf(h);
             if (n.Parent.Stacked) n.Parent.ActiveTab = h;
+        }
+
+        static List<IntPtr> Live()
+        {
+            var live = new List<IntPtr>();
+            Native.EnumWindows((h, l) => { if (IsTileable(h)) live.Add(h); return true; }, IntPtr.Zero);
+            return live;
+        }
+
+        // A monitor's workspaces that aren't shown: their windows wait minimized until you switch back.
+        class Workspace { public string Monitor; public int Number; public Node Root = new Node(); public bool HandMade; public IntPtr Focus; }
+        readonly List<Workspace> hidden = new List<Workspace>();
+        readonly Dictionary<string, int> current = new Dictionary<string, int>(); // monitor -> workspace shown (1 if not listed)
+        string activeMonitor; // where workspace keys act when no tiled window has focus
+
+        int Current(string monitor) { int n; return current.TryGetValue(monitor, out n) ? n : 1; }
+
+        Workspace Hidden(string monitor, int n)
+        {
+            var w = hidden.FirstOrDefault(x => x.Monitor == monitor && x.Number == n);
+            if (w == null) hidden.Add(w = new Workspace { Monitor = monitor, Number = n });
+            return w;
+        }
+
+        string FocusedMonitor()
+        {
+            var f = Focused();
+            if (f != IntPtr.Zero && FindLeaf(f) != null) return MonitorOf(f);
+            return activeMonitor != null && roots.ContainsKey(activeMonitor) ? activeMonitor : roots.Keys.FirstOrDefault();
+        }
+
+        // Win+1..9: show workspace n on the focused monitor.
+        public void SwitchWorkspace(int n)
+        {
+            if (Paused) return;
+            var m = FocusedMonitor();
+            if (m == null) return;
+            Show(m, n, IntPtr.Zero);
+            Flash("Workspace " + n, m);
+            Sync();
+        }
+
+        // Win+Shift+1..9: move the focused window to workspace n of its monitor.
+        public void MoveToWorkspace(int n)
+        {
+            var cur = Focused();
+            if (cur == IntPtr.Zero || Paused || FindLeaf(cur) == null) return;
+            var m = MonitorOf(cur);
+            if (Current(m) == n) return;
+            StopRestoring();
+            autoTabbed.Remove(cur);
+            Tree.Remove(FindLeaf(cur));
+            var w = Hidden(m, n);
+            Tree.Insert(w.Root, cur, null);
+            if (Mode != "manual" && !w.HandMade) w.Root = Tree.Arrange(w.Root, Mode, false);
+            if (Auto(m)) roots[m] = Tree.Arrange(roots[m], Mode, false);
+            Native.ShowWindow(cur, Native.SW_SHOWMINNOACTIVE);
+            Flash("Sent to workspace " + n, m);
+            Apply();
+            var leaves = new List<Node>();
+            Tree.Leaves(roots[m], leaves);
+            if (leaves.Count > 0) Native.Focus(leaves[0].Hwnd);
+        }
+
+        // Puts monitor m's windows away (minimized) and brings workspace n's back.
+        // focus: the window to focus; else the one last used on that workspace.
+        void Show(string m, int n, IntPtr focus)
+        {
+            int from = Current(m);
+            if (from == n) return;
+            StopRestoring();
+            var away = Hidden(m, from);
+            var back = Hidden(m, n);
+            hidden.Remove(back);
+            away.Root = roots[m];
+            away.HandMade = handMade.Remove(m);
+            away.Focus = lastFocus;
+            roots[m] = back.Root;
+            if (back.HandMade) handMade.Add(m);
+            current[m] = n;
+            activeMonitor = m;
+            var leaves = new List<Node>();
+            Tree.Leaves(away.Root, leaves);
+            // no-activate: Windows would otherwise focus a window on another monitor, and the keys would act there
+            foreach (var leaf in leaves) Native.ShowWindow(leaf.Hwnd, Native.SW_SHOWMINNOACTIVE);
+            foreach (var leaf in leaves)
+                if (!Native.IsIconic(leaf.Hwnd)) { Tree.Remove(leaf); Tree.Insert(roots[m], leaf.Hwnd, null); } // won't minimize (e.g. runs as administrator): it comes along
+            Restore(back);
+            if (focus == IntPtr.Zero) focus = back.Focus;
+            if (focus == IntPtr.Zero || Tree.Find(roots[m], focus) == null)
+            {
+                leaves.Clear();
+                Tree.Leaves(roots[m], leaves);
+                focus = leaves.Count > 0 ? leaves[0].Hwnd : IntPtr.Zero;
+            }
+            if (focus != IntPtr.Zero) Native.Focus(focus);
+        }
+
+        static void Restore(Workspace w)
+        {
+            var leaves = new List<Node>();
+            Tree.Leaves(w.Root, leaves);
+            foreach (var leaf in leaves) Native.ShowWindow(leaf.Hwnd, Native.SW_SHOWNOACTIVATE);
+        }
+
+        // Exit / re-tile: every hidden window comes back, so nothing is left minimized.
+        public void ShowAllWorkspaces()
+        {
+            foreach (var w in hidden) Restore(w);
+            hidden.Clear();
+            current.Clear();
+        }
+
+        static void Flash(string text, string monitor)
+        {
+            var d = Native.Displays().FirstOrDefault(x => x.Name == monitor);
+            if (d != null) Toast.Flash(text, d);
         }
 
         IntPtr ActiveOf(Node group)
@@ -127,9 +246,30 @@ namespace Tessera
                 if (!displays.Any(d => d.Name == name)) roots.Remove(name); // its windows get re-added below
             foreach (var d in displays)
                 if (!roots.ContainsKey(d.Name)) roots[d.Name] = new Node();
+            foreach (var w in hidden.Where(w => !roots.ContainsKey(w.Monitor)).ToList())
+            {
+                Restore(w); // its monitor is gone: the windows come back and join the monitors that are left
+                hidden.Remove(w);
+                current.Remove(w.Monitor);
+            }
 
-            var live = new List<IntPtr>();
-            Native.EnumWindows((h, l) => { if (IsTileable(h)) live.Add(h); return true; }, IntPtr.Zero);
+            var live = Live();
+            // a window of a hidden workspace was brought back (taskbar, Alt+Tab): go to that workspace
+            foreach (var w in hidden)
+            {
+                var back = live.FirstOrDefault(h => Tree.Find(w.Root, h) != null);
+                if (back == IntPtr.Zero) continue;
+                Show(w.Monitor, w.Number, back);
+                live = Live();
+                break;
+            }
+            foreach (var w in hidden)
+            {
+                var gone = new List<Node>();
+                Tree.Leaves(w.Root, gone);
+                foreach (var leaf in gone) if (!Native.IsWindow(leaf.Hwnd)) Tree.Remove(leaf); // closed while hidden
+            }
+            hidden.RemoveAll(w => w.Root.Children.Count == 0);
             var liveSet = new HashSet<IntPtr>(live);
             floating.RemoveWhere(h => !Native.IsWindow(h));
             seen.RemoveWhere(h => !Native.IsWindow(h));
@@ -277,11 +417,11 @@ namespace Tessera
                 if (!roots.TryGetValue(d.Name, out root)) continue;
                 var area = Rectangle.Inflate(d.Work, -Gap / 2, -Gap / 2);
                 int tabHeight = 30 * d.Dpi / 96;
-                if (Tree.TabWhatDoesntFit(root, area.Size, Gap, tabHeight, MinOf) && Auto(d.Name))
-                    roots[d.Name] = root = Tree.Arrange(root, Mode, false);
+                roots[d.Name] = root = Fit(d.Name, root, area.Size, tabHeight);
                 Tree.Layout(root, area, Gap, next, tabHeight, groups, MinOf);
             }
             layout = next;
+            autoTabbed.RemoveWhere(h => !Native.IsWindow(h));
             foreach (var h in placed.Keys.Where(h => !layout.ContainsKey(h)).ToList()) placed.Remove(h);
             foreach (var h in minSize.Keys.Where(h => !Native.IsWindow(h)).ToList()) minSize.Remove(h);
             learned = false;
@@ -302,6 +442,23 @@ namespace Tessera
             }
             strips.Update(groups, ActiveOf);
             Border(Native.GetForegroundWindow());
+        }
+
+        // When the windows can't all fit even at their smallest, the last ones become tabs, so nothing overlaps.
+        // Tabs made that way come back out as soon as there's room again; tab groups the user made are left alone.
+        Node Fit(string monitor, Node root, Size area, int tabHeight)
+        {
+            var mine = autoTabbed.Where(h => { var n = Tree.Find(root, h); return n != null && n.Parent.Stacked; }).ToList();
+            bool auto = Auto(monitor);
+            var trial = Tree.Clone(root);
+            foreach (var h in mine) Tree.Untab(trial, h);
+            if (mine.Count > 0 && auto) trial = Tree.Arrange(trial, Mode, false);
+            var tabbed = new HashSet<IntPtr>();
+            while (Tree.TabWhatDoesntFit(trial, area, Gap, tabHeight, MinOf, tabbed) && auto) trial = Tree.Arrange(trial, Mode, false);
+            if (tabbed.SetEquals(mine)) return root; // the same windows end up as tabs: keep the tree, and its sizes, as they are
+            autoTabbed.ExceptWith(mine);
+            autoTabbed.UnionWith(tabbed);
+            return trial;
         }
 
         // Windows 11 window-border color on the focused managed window; the previous one goes back to normal.
@@ -462,6 +619,7 @@ namespace Tessera
             var b = FindLeaf(target);
             if (a != null && b != null && a != b)
             {
+                autoTabbed.Remove(dragged); // placed by hand now
                 if (zone == 4) Swap(a, b);
                 else
                 {
@@ -583,6 +741,7 @@ namespace Tessera
             var n = FindLeaf(Focused());
             if (n == null || Paused) return;
             var p = n.Parent;
+            foreach (var c in p.Children) autoTabbed.Remove(c.Hwnd); // the user decides about this group now
             if (p.Stacked) p.Stacked = false;
             else if (p.Parent != null && p.Children.Count == 1) p.Stacked = true;
             else Tree.Wrap(n).Stacked = true;
@@ -637,6 +796,12 @@ namespace Tessera
                 foreach (var leaf in leaves) result.Add(new KeyValuePair<IntPtr, string>(leaf.Hwnd, Native.IsZoomed(leaf.Hwnd) ? "Maximized" : leaf.Parent.Stacked ? "Tab" : "Tiled"));
             }
             foreach (var h in floating) result.Add(new KeyValuePair<IntPtr, string>(h, "Floating"));
+            foreach (var w in hidden)
+            {
+                var leaves = new List<Node>();
+                Tree.Leaves(w.Root, leaves);
+                foreach (var leaf in leaves) result.Add(new KeyValuePair<IntPtr, string>(leaf.Hwnd, "Workspace " + w.Number));
+            }
             return result;
         }
 
@@ -645,6 +810,8 @@ namespace Tessera
             StopRestoring();
             Ignore.Load();
             Rules.Load();
+            ShowAllWorkspaces(); // their windows join the tiles again
+            autoTabbed.Clear();
             roots.Clear();
             handMade.Clear();
             splitNext = null;

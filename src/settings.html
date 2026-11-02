@@ -487,6 +487,10 @@ dialog::backdrop{background:var(--scrim)}
             <div class="info-text"><h3>Blue border</h3><p>The focused window gets a blue border, so you always know where your shortcuts go.</p></div>
           </li>
           <li class="info-row">
+            <span class="tile-ic"><i data-ic="tabs"></i></span>
+            <div class="info-text"><h3>No overlapping</h3><p>Some apps can't get smaller than a certain size. They get the room they need and the others share the rest. If there still isn't room, the last window becomes a tab, and it gets its own tile back as soon as there's space.</p></div>
+          </li>
+          <li class="info-row">
             <span class="tile-ic"><i data-ic="history"></i></span>
             <div class="info-text"><h3>Layout memory</h3><p>Tile sizes, tab groups and which app is where are saved every few seconds, and restored after a restart as your apps open.</p></div>
           </li>
@@ -635,6 +639,7 @@ const WIN = {
   'Win+Ctrl+Left':'Switch virtual desktop', 'Win+Ctrl+Right':'Switch virtual desktop',
   'Win+F1':'Windows help', 'Win+Alt+Up':'Snap top/bottom', 'Win+Alt+Down':'Snap top/bottom'
 };
+for (let n = 1; n <= 9; n++) { WIN['Win+' + n] = 'Open taskbar app ' + n; WIN['Win+Shift+' + n] = 'New window of taskbar app ' + n; }
 
 function parse(b) {
   const r = { mods: { Win:false, Ctrl:false, Alt:false, Shift:false }, key: '' };
@@ -688,6 +693,8 @@ const DEFAULTS = [
   ['tabs','Tabs','Tab group','Turn the focused window into a tab group, or lay a tab group out side by side again.','Win+S'],
   ['tab-next','Tabs','Next tab','Show the next tab of the group.','Win+PageDown'],
   ['tab-prev','Tabs','Previous tab','Show the previous tab of the group.','Win+PageUp'],
+  ...[1,2,3,4,5,6,7,8,9].map(n => ['workspace-' + n,'Workspaces','Workspace ' + n,'Show workspace ' + n + ' on the focused monitor; the windows you leave wait minimized.','Win+' + n]),
+  ...[1,2,3,4,5,6,7,8,9].map(n => ['to-workspace-' + n,'Workspaces','Send to workspace ' + n,'Move the focused window to workspace ' + n + ' of its monitor.','Win+Shift+' + n]),
   ['inspector','Tools','Window inspector','See every managed window and its program; float, ignore, close or kill it.','Win+Shift+I'],
   ['pause','Tools','Pause / resume','Pause tiling and give Windows its own shortcuts back.','Win+P'],
   ['retile','Tools','Re-tile everything','Start over from scratch (resets sizes and tab groups, reloads the ignore list and applies app rules to open windows).','Win+Y'],
