@@ -418,6 +418,17 @@ namespace Tessera
                 var area = Rectangle.Inflate(d.Work, -Gap / 2, -Gap / 2);
                 int tabHeight = 30 * d.Dpi / 96;
                 roots[d.Name] = root = Fit(d.Name, root, area.Size, tabHeight);
+                var leaves = new List<Node>();
+                Tree.Leaves(root, leaves);
+                if (leaves.Any(n => Native.IsZoomed(n.Hwnd)))
+                {
+                    // a maximized window keeps its spot for when it's restored, but the others fill the screen meanwhile
+                    // shortcut: tab strips on this monitor are rebuilt each time while it's maximized; key them by window if that flickers
+                    root = Tree.Clone(root);
+                    leaves.Clear();
+                    Tree.Leaves(root, leaves);
+                    foreach (var n in leaves) if (Native.IsZoomed(n.Hwnd)) Tree.Remove(n);
+                }
                 Tree.Layout(root, area, Gap, next, tabHeight, groups, MinOf);
             }
             layout = next;
@@ -566,6 +577,15 @@ namespace Tessera
         }
 
         public bool IsTiled(IntPtr h) { return FindLeaf(h) != null; }
+
+        readonly HashSet<IntPtr> zoomed = new HashSet<IntPtr>();
+
+        // True when h was just maximized or restored (moving a window says nothing about that on its own).
+        public bool ZoomChanged(IntPtr h)
+        {
+            zoomed.RemoveWhere(x => !Native.IsWindow(x));
+            return Native.IsZoomed(h) ? zoomed.Add(h) : zoomed.Remove(h);
+        }
 
         // Container p's current size in pixels along its split axis.
         int ContainerLength(Node p)

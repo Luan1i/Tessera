@@ -52,9 +52,9 @@ namespace Tessera
 
     class App : ApplicationContext
     {
-        const uint EVENT_SYSTEM_FOREGROUND = 0x0003, EVENT_SYSTEM_MOVESIZESTART = 0x000A, EVENT_SYSTEM_MOVESIZEEND = 0x000B;
-        // foreground, move/resize start/end, minimize start/end, destroy/show/hide, title change, cloaked/uncloaked
-        static readonly uint[] EventRanges = { 0x0003, 0x0003, 0x000A, 0x000B, 0x0016, 0x0017, 0x8001, 0x8003, 0x800C, 0x800C, 0x8017, 0x8018 };
+        const uint EVENT_SYSTEM_FOREGROUND = 0x0003, EVENT_SYSTEM_MOVESIZESTART = 0x000A, EVENT_SYSTEM_MOVESIZEEND = 0x000B, EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+        // foreground, move/resize start/end, minimize start/end, destroy/show/hide, moved (for maximize/restore), title change, cloaked/uncloaked
+        static readonly uint[] EventRanges = { 0x0003, 0x0003, 0x000A, 0x000B, 0x0016, 0x0017, 0x8001, 0x8003, 0x800B, 0x800C, 0x8017, 0x8018 };
 
         readonly WM wm = new WM();
         readonly DragController drag;
@@ -81,6 +81,7 @@ namespace Tessera
             onEvent = (hook, ev, h, idObject, idChild, thread, time) =>
             {
                 if (idObject != 0) return; // whole windows only, not carets/scrollbars
+                if (ev == EVENT_OBJECT_LOCATIONCHANGE && !wm.ZoomChanged(h)) return; // windows move all the time; only maximize/restore matters
                 if (ev == EVENT_SYSTEM_FOREGROUND) wm.NoteFocus(h);
                 else if (ev == EVENT_SYSTEM_MOVESIZESTART) drag.Start(h);
                 else if (ev == EVENT_SYSTEM_MOVESIZEEND) drag.End(h);
